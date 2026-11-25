@@ -212,7 +212,7 @@ def batch_evidence(db: DB, batch_id: int) -> dict:
     taste = taste_summary(prof, top=10)
     fb = Counter(it["feedback"] for it in b["items"] if it["feedback"])
     return {
-        "volume": batch_id,
+        "volume": b.get("vol", batch_id),
         "your_taste": {**taste, "favorites_count": len(prof.favorites)},
         "feedback_in_this_volume": {"心动": fb.get("want", 0), "略过": fb.get("skip", 0), "不喜欢": fb.get("dislike", 0), "读过": fb.get("seen", 0) + fb.get("seen_like", 0), "读过且喜欢": fb.get("seen_like", 0)},
         "items": [

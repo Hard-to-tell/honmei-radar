@@ -114,6 +114,19 @@ main { max-width: 1320px; margin: 0 auto; padding: 16px 16px 60px; }
 .tabs { display: flex; gap: 4px; background: var(--bg2); border: 1px solid var(--line); padding: 3px; border-radius: 10px; }
 .tabs button { border: 0; background: transparent; padding: 4px 12px; border-radius: 7px; cursor: pointer; color: var(--muted); }
 .tabs button.on { background: var(--y); color: var(--y-ink); font-weight: 700; }
+#genDlg { width: min(520px, calc(100vw - 32px)); }
+.modes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.modes button { text-align: left; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; color: var(--ink); cursor: pointer; font: inherit; position: relative; transition: border-color .15s, background .15s; }
+.modes button:hover { border-color: #555; }
+.modes button b { display: block; font-size: 15px; margin-bottom: 3px; }
+.modes button span { color: var(--muted); font-size: 12px; line-height: 1.5; }
+.modes button.on { border-color: var(--y); background: rgba(255,210,31,.08); }
+.modes button.on b { color: var(--y); }
+.modes button.on::after { content: "✓"; position: absolute; right: 12px; top: 10px; color: var(--y); font-weight: 700; }
+.gen-go { display: flex; align-items: center; gap: 12px; }
+.gen-go .hint { margin: 0; flex: 1; }
+@media (max-width: 560px) { .modes { grid-template-columns: 1fr; } }
+.note.thin { border-style: solid; border-color: #4a3d12; background: rgba(255,210,31,.06); color: #e8dca8; }
 .note { color: var(--muted); font-size: 13px; background: var(--bg2); border: 1px dashed var(--line); border-radius: 10px; padding: 8px 12px; margin-bottom: 14px; }
 .note .warn { color: var(--skip); }
 
@@ -273,6 +286,8 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
       <div class="hint" id="rankerState" style="margin-top:10px"></div>
       <div class="row" style="margin-top:10px"><button class="btn sm" onclick="runEval()" title="把最新 20% 的禁漫收藏藏起来，看新旧算法谁能把它们找回来">检验算法</button>
         <span class="hint" id="evalMsg" style="margin:0;flex:1"></span></div>
+      <div class="row" style="margin-top:10px"><button class="btn sm ghost" id="resetBtn" onclick="resetBatches()">重置开卷记录</button>
+        <span class="hint" id="resetMsg" style="margin:0;flex:1">清空所有 Vol，下一卷从 Vol.1 开始。心动、略过、调音这些都留着，推荐照样记得你的口味。</span></div>
     </div>
 
     <div class="sec">
@@ -318,6 +333,14 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
     <div class="row"><span class="hint" id="anaFrom" style="margin:0;flex:1"></span><button class="btn y sm" id="anaRun">请它读这一卷</button></div>
   </div>
 </dialog>
+<dialog id="genDlg">
+  <div class="dlg-h"><h2>这一卷想要什么口味？</h2><button class="btn sm ghost" onclick="genDlg.close()">关闭</button></div>
+  <div class="dlg-b">
+    <div class="modes" id="modeList"></div>
+    <div id="genThin"></div>
+    <div class="gen-go"><span class="hint">会记住这次的选择，下次直接是它。</span><button class="btn y" id="genGo">开卷 ✦</button></div>
+  </div>
+</dialog>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -349,9 +372,11 @@ async function loadStatus() {
     `<span class="chip">心动 <b>${fb["心动"] || 0}</b></span>`;
   const sel = $("batchSel");
   sel.innerHTML = s.batches.length
-    ? s.batches.map(b => `<option value="${b.id}">Vol.${b.id} · ${fmtTime(b.created_at)}</option>`).join("")
+    ? s.batches.map(b => `<option value="${b.id}">Vol.${b.vol ?? b.id} · ${fmtTime(b.created_at)}</option>`).join("")
     : `<option value="">尚未开卷</option>`;
   if (S.batch) sel.value = S.batch.id;
+  if (!S.mode) S.mode = s.rec_mode || "balance";
+  renderMode();
   const cb = $("calBtn"); if (cb) cb.innerHTML = "调音 · 5 本" + (s.calibrate && s.calibrate.dot ? "<i></i>" : "");
   renderDrawer();
   renderTasks(s.jobs || []);
@@ -403,7 +428,7 @@ function doneText(j) {
   const r = j.result || {};
   if (j.kind.startsWith("import")) return `已导入 ${r.count} 本` + (r.detail_failed ? `，${r.detail_failed} 本没取到标签（下次导入会补）` : "") +
     (S.status && S.status.calibrate && !S.status.calibrate.rated ? "。可以点顶栏的“调音”给 5 本打分，推荐会更准" : "");
-  if (j.kind === "generate") return `Vol.${r.batch_id} 已成卷`;
+  if (j.kind === "generate") return `Vol.${r.vol ?? r.batch_id} 已成卷`;
   if (j.kind.startsWith("analyze")) return `${r.engine_name || ""} 读完了` + (r.pos ? "，结果在“为何是它”里" : "，点“✧ 解读”查看");
   if (j.kind === "net") return netSummary(r);
   if (j.kind === "semantic") return "语义匹配已就绪，下一批开始使用";
@@ -456,13 +481,14 @@ function render() {
   const n = (f) => b.items.filter(it => f === "none" ? !it.feedback : it.feedback === f).length;
   c.innerHTML = `
     <div class="head">
-      <div><h2>Vol. <span>${b.id}</span></h2><div class="sub">${fmtTime(b.created_at)} · ${engine} · 从 ${m.pool ?? "?"} 本候选里挑出 ${b.items.length} 本</div></div>
+      <div><h2>Vol. <span>${b.vol ?? b.id}</span></h2><div class="sub">${fmtTime(b.created_at)}${m.mode && m.mode !== "balance" ? ` · ${esc(m.mode_name)}` : ""} · ${engine} · 从 ${m.pool ?? "?"} 本候选里挑出 ${b.items.length} 本</div></div>
       <span class="spacer"></span>
       <div class="tabs">
         ${[["all", "全部", b.items.length], ["none", "未翻阅", n("none")], ["want", "心动", n("want")]].map(([k, t, c]) =>
           `<button class="${S.filter === k ? "on" : ""}" onclick="setFilter('${k}')">${t} ${c}</button>`).join("")}
       </div>
     </div>
+    ${thinNote()}
     ${m.ranker_message || m.semantic_error ? `<div class="note">${esc(m.ranker_message || "")}${m.semantic_error ? `<br><span class="warn">语义匹配这批没用上：${esc(m.semantic_error)}</span>` : ""}</div>` : ""}
     ${items.length ? `<div class="grid">${items.map(card).join("")}</div>` : `<div class="empty-msg">这里还空着</div>`}`;
 }
@@ -506,7 +532,7 @@ async function feedback(pos, label, exact = false) {
 let whyPos = null;
 async function why(pos) {
   whyPos = pos;
-  $("whyTitle").textContent = `Vol.${S.batch.id} · No.${pos}　为何是它`;
+  $("whyTitle").textContent = `Vol.${S.batch.vol ?? S.batch.id} · No.${pos}　为何是它`;
   $("whyLocal").textContent = "翻找中…";
   $("whyDeep").hidden = true;
   const a = S.status?.analyze || {};
@@ -529,7 +555,7 @@ async function deep(pos) {
 async function openAnalysis() {
   if (!S.batch) return toast("先开一卷，再来解读");
   const a = S.status?.analyze || {};
-  $("anaTitle").textContent = `Vol.${S.batch.id} · 卷首语`;
+  $("anaTitle").textContent = `Vol.${S.batch.vol ?? S.batch.id} · 卷首语`;
   $("anaRun").disabled = !a.engine;
   $("anaRun").textContent = a.engine ? `请 ${a.engine_name} 读这一卷` : "没有可用的解读者";
   $("anaRun").onclick = runAnalysis;
@@ -552,7 +578,7 @@ function showAnalysis(r) {
     }
     return;
   }
-  $("anaTitle").textContent = `Vol.${r.batch_id} · 卷首语`;
+  $("anaTitle").textContent = `Vol.${S.batch && S.batch.id === r.batch_id ? (S.batch.vol ?? r.batch_id) : r.batch_id} · 卷首语`;
   $("anaText").textContent = r.text;
   $("anaFrom").textContent = `来自 ${r.engine_name}`;
   if (!anaDlg.open) anaDlg.showModal();
@@ -577,7 +603,7 @@ function onboarding() {
   const ready = p.favorites + j.favorites > 0;
   return `<div class="hero"><h1>下一本<span>本命</span>，正在某处等你。</h1><p>读懂你在哔咔和禁漫的收藏，去禁漫替你寻那些还没遇见的作品。一切都在这台电脑上完成。</p></div>
     <div class="onb">${siteStep(1, "pica", "哔咔用户名或邮箱")}${siteStep(2, "jm", "禁漫用户名")}
-    ${step(3, false, "翻开第一卷", `<p>${ready ? "收藏已就绪。只有一个站也可以先开卷，另一个站之后补上会合并计算。" : "先完成前两步中的至少一个。"}</p><button class="btn y" ${ready ? "" : "disabled"} onclick="generate()">开卷 ✦</button>`)}</div>`;
+    ${step(3, false, "翻开第一卷", `<p>${ready ? "收藏已就绪。只有一个站也可以先开卷，另一个站之后补上会合并计算。" : "先完成前两步中的至少一个。"}</p>${ready ? thinNote() : ""}<button class="btn y" ${ready ? "" : "disabled"} onclick="generate()">开卷 ✦</button>`)}</div>`;
 }
 
 /* ---------- 账号与设置 ---------- */
@@ -658,9 +684,55 @@ async function login(site, uid, pid) {
 }
 async function logout(site) { await api("/api/logout/" + site, { method: "POST" }); await loadStatus(); if (!S.batch) render(); }
 async function doImport(site) { closeDrawer(); try { await runJob("/api/import/" + site); } catch (e) { toast(e.message); } }
-async function generate() { try { await runJob("/api/batches"); } catch (e) { toast(e.message); } }
+async function generate() { if (genDlg.open) genDlg.close(); try { await runJob("/api/batches", { mode: S.mode || "balance" }); } catch (e) { toast(e.message); } }
 
-$("genBtn").onclick = generate;
+/* ---------- 开卷口味 ---------- */
+const MODES = [
+  ["balance", "平衡", "照你的口味来，熟的新的都有一点"],
+  ["safe", "稳妥", "多来熟作者和你最常看的口味"],
+  ["fresh", "尝鲜", "少推熟作者，多给没见过的"],
+  ["niche", "冷门", "不看热度，专挑没什么人看的"],
+];
+function renderMode() {
+  $("modeList").innerHTML = MODES.map(([k, n, d]) =>
+    `<button class="${k === (S.mode || "balance") ? "on" : ""}" onclick="setMode('${k}')"><b>${n}</b><span>${d}</span></button>`).join("");
+}
+function setMode(k) {
+  if (k === S.mode) return;
+  S.mode = k; renderMode();
+  api("/api/settings", { method: "POST", body: JSON.stringify({ rec_mode: k }) }).catch(() => {});
+}
+function openGen() {
+  renderMode(); $("genThin").innerHTML = thinNote();
+  genDlg.showModal(); $("genGo").focus();
+}
+$("genGo").onclick = generate;
+
+function thinNote() {
+  const s = S.status; if (!s) return "";
+  const n = s.sites.pica.favorites + s.sites.jm.favorites;
+  return n > 0 && n < 20 ? `<div class="note thin">两站收藏一共只有 ${n} 本，推荐可能不太准。多收藏一些，或者先点顶栏的“调音”给几本打分，会准很多。</div>` : "";
+}
+
+let resetArm = null;
+async function resetBatches() {
+  const b = $("resetBtn");
+  if (!resetArm) {
+    b.textContent = "再点一次确认"; b.classList.add("y");
+    resetArm = setTimeout(() => { resetArm = null; b.textContent = "重置开卷记录"; b.classList.remove("y"); }, 4000);
+    return;
+  }
+  clearTimeout(resetArm); resetArm = null;
+  try {
+    await api("/api/batches/reset", { method: "POST", body: "{}" });
+    b.textContent = "重置开卷记录"; b.classList.remove("y");
+    $("resetMsg").textContent = "已清空。下一卷从 Vol.1 开始，你的心动、略过和调音都还在。";
+    S.batch = null; history.replaceState(null, "", location.pathname);
+    await loadStatus(); render();
+  } catch (e) { toast(e.message); }
+}
+
+$("genBtn").onclick = openGen;
 $("anaBtn").onclick = openAnalysis;
 $("anaModel").onchange = async (e) => {
   const eng = (S.status.analyze || {}).engine || "codex";

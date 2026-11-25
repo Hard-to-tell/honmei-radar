@@ -172,17 +172,26 @@ def _exclusion(db: DB) -> tuple[set[str], set[str], set[tuple[str, str]]]:
         w = db.get_work(s, wid)
         if w:   # 表过态的作品，它的其他版本也不再推
             keys |= dedup_keys(w.title, w.authors)
-    # 前几卷展示过的不再出现（每卷都是新的）
-    for r in db.q("SELECT DISTINCT site, wid FROM batch_items"):
+    # 前几卷展示过的不再出现（每卷都是新的）；重置过开卷记录的话，只算重置之后的卷
+    for r in db.q("SELECT DISTINCT site, wid FROM batch_items WHERE batch_id > ?", (db.batch_offset(),)):
         blocked.add((r["site"], r["wid"]))
     return jm_ids, keys, blocked
 
 
-def _quotas(main_k: int, cinfo: list[dict], rnd: random.Random) -> dict[int, int]:
+# 开卷前选的“这一卷想要什么”。只是在固定打分上加减一点，再改改名额，不碰学到的口味
+MODES = {
+    "balance": {"name": "平衡"},
+    "safe":    {"name": "稳妥", "author": 0.15, "fit": 0.10, "explore": 0.5, "power": 0.8, "per_author": 3},
+    "fresh":   {"name": "尝鲜", "author": -0.22, "explore": 2.0, "power": 0.3, "per_author": 1, "new_author": 0.08},
+    "niche":   {"name": "冷门", "pop": -0.30, "explore": 1.0, "hot": False},
+}
+
+
+def _quotas(main_k: int, cinfo: list[dict], rnd: random.Random, power: float = 0.5) -> dict[int, int]:
     """名额按簇占比开平方分（大簇不吃掉整卷），再乘调音给的簇权重；每个有效簇至少 1 本。
     被确认不喜欢的簇（静音）大约每 2～3 卷才出现 1 本。"""
     live = [(ci, c) for ci, c in enumerate(cinfo) if not c.get("muted")]
-    raw = {ci: math.sqrt(c["share"]) * c.get("weight", 1.0) for ci, c in live}
+    raw = {ci: (c["share"] ** power) * c.get("weight", 1.0) for ci, c in live}
     tot = sum(raw.values()) or 1.0
     q = {ci: max(1, round(main_k * v / tot)) for ci, v in raw.items()}
     for ci, c in enumerate(cinfo):
@@ -193,7 +202,7 @@ def _quotas(main_k: int, cinfo: list[dict], rnd: random.Random) -> dict[int, int
 
 def _pick(cands: list[Work], scores: list[float], routes: list[str], k: int, explore_k: int,
           max_per_author: int, rnd: random.Random, clusters: list[int] | None = None,
-          cinfo: list[dict] | None = None) -> list[int]:
+          cinfo: list[dict] | None = None, power: float = 0.5, hot_k: int = 1) -> list[int]:
     """选出一卷：主体按分数取，但每个口味簇有名额；探索名额按簇的不确定程度抽（反馈越少、
     好坏越混杂的簇越常被试探），另留一本站内热门。"""
     order = sorted(range(len(cands)), key=lambda i: -scores[i])
@@ -203,7 +212,7 @@ def _pick(cands: list[Work], scores: list[float], routes: list[str], k: int, exp
     clusters = clusters or [-1] * len(cands)
     cinfo = cinfo or []
     main_k = k - explore_k
-    quota = _quotas(main_k, cinfo, rnd) if cinfo else {}
+    quota = _quotas(main_k, cinfo, rnd, power) if cinfo else {}
     muted = {ci for ci, c in enumerate(cinfo) if c.get("muted")}
 
     def ok(i: int) -> bool:
@@ -246,7 +255,7 @@ def _pick(cands: list[Work], scores: list[float], routes: list[str], k: int, exp
     # 2) 一本站内热门（偶遇）
     hot = [i for i in order if routes[i] == "explore" and i not in chosen]
     rnd.shuffle(hot)
-    for i in hot[:1]:
+    for i in hot[:hot_k]:
         if len(chosen) < k and ok(i):
             take(i)
     # 3) 试探：先按不确定程度抽一个簇，再取这簇里分数最高、还没选的
@@ -286,9 +295,12 @@ def reason_text(reason: dict, route: str) -> str:
     return "；".join(parts)
 
 
-def generate_batch(db: DB, jm: SiteAdapter, progress: Progress | None = None, seed: int | None = None) -> int:
+def generate_batch(db: DB, jm: SiteAdapter, progress: Progress | None = None, seed: int | None = None,
+                   mode: str | None = None) -> int:
     settings = load_settings()
     k = int(settings.get("batch_size", 20))
+    mode = mode if mode in MODES else (settings.get("rec_mode") if settings.get("rec_mode") in MODES else "balance")
+    mc = MODES[mode]
     rnd = random.Random(seed if seed is not None else time.time())
 
     semantic = get_semantic(db, settings)
@@ -373,9 +385,17 @@ def generate_batch(db: DB, jm: SiteAdapter, progress: Progress | None = None, se
                 scores[i] += 0.1 * c.get("practical", 0) * (feats[i]["fit"] - 0.5) \
                     + 0.1 * c.get("story", 0) * feats[i].get("semantic", 0)
 
-    explore_k = 0 if profile.empty else max(1, round(k * float(settings.get("explore_ratio", 0.15))))
+    # 这一卷的口味开关
+    if mode != "balance":
+        for i, f in enumerate(feats):
+            scores[i] += mc.get("author", 0) * f["author"] + mc.get("fit", 0) * (f["fit"] - 0.5) \
+                + mc.get("pop", 0) * f["pop"] + mc.get("new_author", 0) * (1.0 if f["author"] < 0.05 else 0.0)
+
+    explore_k = 0 if profile.empty else max(1, round(k * float(settings.get("explore_ratio", 0.15)) * mc.get("explore", 1.0)))
     cinfo = taste.clusters if taste is not None else None
-    chosen = _pick(cands, scores, routes, k, explore_k, int(settings.get("max_per_author", 2)), rnd, cl, cinfo)
+    per_author = mc.get("per_author", int(settings.get("max_per_author", 2)))
+    chosen = _pick(cands, scores, routes, k, explore_k, per_author, rnd, cl, cinfo,
+                   power=mc.get("power", 0.5), hot_k=1 if mc.get("hot", True) else 0)
 
     items = []
     for i in chosen:
@@ -388,12 +408,12 @@ def generate_batch(db: DB, jm: SiteAdapter, progress: Progress | None = None, se
         items.append({"site": "jm", "wid": cands[i].wid, "score": round(scores[i], 4),
                       "features": feats[i], "reason": r, "route": routes[i]})
     meta = {"pool": len(pool), "ranker": state.get("mode"), "ranker_message": state.get("message", ""),
-            "semantic_error": sem_error, "algo": "v2",
+            "semantic_error": sem_error, "algo": "v2", "mode": mode, "mode_name": mc["name"],
             "background": len(taste.background) if taste is not None else 0,
             "favorites": {s: len(db.collection(s)) for s in ("jm", "pica")}}
     bid = db.create_batch(engine, items, meta)
     if progress:
-        progress(f"Vol.{bid} 已成卷，共 {len(items)} 本")
+        progress(f"Vol.{bid - db.batch_offset()} 已成卷，共 {len(items)} 本")
     return bid
 
 

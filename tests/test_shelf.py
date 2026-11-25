@@ -286,3 +286,25 @@ def test_portrait_inbox(svc):
     p = svc.db.kv_get("portraits")[0]
     assert p["engine_name"] == "测试" and p["data"]["title"] == "测试称号"
     assert (box / "a.imported").exists() and import_inbox(svc.db) == 0
+
+
+def test_modes_and_reset(svc):
+    from manga_shelf.importer import import_favorites
+    from manga_shelf.recommend import MODES, generate_batch
+    import_favorites(svc.db, svc.adapter("pica"))
+    import_favorites(svc.db, svc.adapter("jm"))
+    b1 = generate_batch(svc.db, svc.adapter("jm"), mode="fresh")
+    meta = svc.batch(b1)["meta"]
+    assert meta["mode"] == "fresh" and meta["mode_name"] == MODES["fresh"]["name"]
+    # 尝鲜：每个作者最多一本
+    from collections import Counter
+    c = Counter(it["authors"][0] for it in svc.batch(b1)["items"] if it["authors"])
+    assert max(c.values()) == 1
+    b2 = generate_batch(svc.db, svc.adapter("jm"), mode="niche")
+    svc.feedback(b2, 1, "want")
+    assert [b["vol"] for b in svc.db.list_batches(30)] == [2, 1]
+    svc.reset_batches()
+    assert svc.db.list_batches(30) == [] and svc.batch(b2) is None
+    assert svc.status()["feedback_counts"].get("心动") == 1   # 表态都还在
+    b3 = generate_batch(svc.db, svc.adapter("jm"))
+    assert svc.batch(b3)["vol"] == 1

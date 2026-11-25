@@ -48,6 +48,7 @@ section:nth-child(4n) { background: radial-gradient(ellipse 60% 60% at 100% 100%
   border-radius: 999px; padding: 6px 16px; font-size: 14px; color: var(--muted); }
 .you b { color: var(--y); font-size: 16px; }
 .mini { display: flex; gap: 28px; margin-top: 26px; flex-wrap: wrap; }
+.thin { display: inline-block; margin-top: 16px; border: 1px solid #4a3d12; background: rgba(255,210,31,.06); color: #e8dca8; border-radius: 10px; padding: 8px 14px; font-size: 13px; }
 .mini div b { display: block; font-size: 28px; font-weight: 900; color: var(--ink); font-variant-numeric: tabular-nums; line-height: 1.1; }
 .mini div span { color: var(--faint); font-size: 12px; }
 
@@ -403,6 +404,7 @@ function render() {
      <div class="hero"><div class="kicker">HONMEI · 本命报告</div><h1 class="reveal">你的<em>本命</em><br>报告</h1>
      <p class="lead reveal">${D.total} 本收藏，${D.distinct_authors} 位作者，一份只属于你的口味档案。全部在这台电脑上算出来。</p>
      ${d?.title ? `<div class="you reveal">AI 说你是<b>${esc(d.title)}</b></div>` : ""}
+     ${D.total < 20 ? `<div class="thin reveal">只有 ${D.total} 本收藏，样本还少，下面的结论可能不太准。</div><br>` : ""}
      <div class="mini reveal"><div><b data-count="${D.total}">${D.total}</b><span>本收藏</span></div><div><b data-count="${D.clusters.length}">${D.clusters.length}</b><span>种口味</span></div>
        <div><b>${esc(topTags[0]?.tag || "—")}</b><span>最常见的词</span></div><div><b>${esc(topAuthor?.name || "—")}</b><span>收得最多的作者</span></div></div></div>
      <div class="hint">↓ 往下滑，或者按 ↓ 键</div>`,

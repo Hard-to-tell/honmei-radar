@@ -16,6 +16,8 @@ DEFAULTS: dict = {
     "explore_ratio": 0.15,
     # 同一作者在一批里最多出现几本
     "max_per_author": 2,
+    # 开卷口味：balance 平衡 / safe 稳妥 / fresh 尝鲜 / niche 冷门
+    "rec_mode": "balance",
     # 手动代理，例如 "http://127.0.0.1:7890"；留空则自动检测（直连 / 系统代理 / 常见本地代理端口）
     "proxy": "",
     "jm": {

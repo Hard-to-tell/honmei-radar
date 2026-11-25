@@ -124,6 +124,7 @@ class Service:
                 for s, n in SITES.items()
             },
             "batches": self.db.list_batches(30),
+            "rec_mode": settings.get("rec_mode", "balance"),
             "ranker": {**ranker, "weights_text": describe_weights(ranker)},
             "calibrate": self.calibrate_state(),
             "clusters": self.db.kv_get("taste:clusters"),
@@ -225,9 +226,20 @@ class Service:
             return r
         return self.jobs.start(f"import-{site}", f"导入{SITES.get(site, site)}收藏", run)
 
-    def start_generate(self) -> str:
+    def start_generate(self, mode: str | None = None) -> str:
+        from .recommend import MODES
+        if mode in MODES:
+            save_settings({"rec_mode": mode})
         jm = self.adapter("jm")
-        return self.jobs.start("generate", "开卷", lambda p: {"batch_id": generate_batch(self.db, jm, p)})
+
+        def run(p):
+            bid = generate_batch(self.db, jm, p, mode=mode)
+            return {"batch_id": bid, "vol": bid - self.db.batch_offset()}
+        return self.jobs.start("generate", "开卷", run)
+
+    def reset_batches(self) -> dict:
+        self.db.reset_batches()
+        return {"ok": True}
 
     # ---- 解读（可选：API / Codex / Claude Code） ----
     def start_analyze_batch(self, batch_id: int, engine: str | None = None) -> str:

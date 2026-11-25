@@ -54,8 +54,12 @@ def create_app(service: Service | None = None) -> FastAPI:
         return {"job": svc.start_import(site, body.get("max_pages"))}
 
     @app.post("/api/batches")
-    def start_generate():
-        return {"job": svc.start_generate()}
+    def start_generate(body: dict = Body(default={})):
+        return {"job": svc.start_generate((body or {}).get("mode"))}
+
+    @app.post("/api/batches/reset")
+    def reset_batches():
+        return svc.reset_batches()
 
     @app.get("/api/jobs")
     def jobs():

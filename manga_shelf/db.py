@@ -217,14 +217,25 @@ class DB:
             self.conn.commit()
             return bid
 
+    # 重置开卷记录：不删数据（心动 / 略过要靠它们训练），只记下“从哪一卷之后算起”，之后的卷从 Vol.1 重新编号
+    def batch_offset(self) -> int:
+        return int((self.kv_get("batches:reset") or {}).get("after", 0))
+
+    def reset_batches(self) -> int:
+        r = self.q("SELECT MAX(id) m FROM batches")
+        after = int(r[0]["m"] or 0)
+        self.kv_set("batches:reset", {"after": after, "at": time.time()})
+        return after
+
     def list_batches(self, limit: int = 50) -> list[dict]:
+        off = self.batch_offset()
         rows = self.q(
             "SELECT b.id, b.created_at, b.engine, b.meta, COUNT(i.pos) n FROM batches b "
-            "LEFT JOIN batch_items i ON i.batch_id=b.id GROUP BY b.id ORDER BY b.id DESC LIMIT ?",
-            (limit,),
+            "LEFT JOIN batch_items i ON i.batch_id=b.id WHERE b.id > ? GROUP BY b.id ORDER BY b.id DESC LIMIT ?",
+            (off, limit),
         )
         return [
-            {"id": r["id"], "created_at": r["created_at"], "engine": r["engine"],
+            {"id": r["id"], "vol": r["id"] - off, "created_at": r["created_at"], "engine": r["engine"],
              "meta": json.loads(r["meta"]), "count": r["n"]}
             for r in rows
         ]
@@ -239,10 +250,11 @@ class DB:
         ]
 
     def batch_meta(self, batch_id: int) -> dict | None:
-        r = self.q("SELECT * FROM batches WHERE id=?", (batch_id,))
+        off = self.batch_offset()
+        r = self.q("SELECT * FROM batches WHERE id=? AND id > ?", (batch_id, off))
         if not r:
             return None
-        return {"id": r[0]["id"], "created_at": r[0]["created_at"], "engine": r[0]["engine"],
+        return {"id": r[0]["id"], "vol": r[0]["id"] - off, "created_at": r[0]["created_at"], "engine": r[0]["engine"],
                 "meta": json.loads(r[0]["meta"])}
 
     def shown_keys(self) -> set[tuple[str, str]]:
