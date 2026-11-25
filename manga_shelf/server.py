@@ -131,6 +131,14 @@ def create_app(service: Service | None = None) -> FastAPI:
     def eval_result():
         return svc.db.kv_get("eval") or {}
 
+    @app.get("/api/portrait/ask")
+    def portrait_ask():
+        """给用户复制去 AI 客户端（Claude / Codex 桌面端）的一句话。"""
+        from pathlib import Path
+        root = Path(__file__).resolve().parents[1]
+        return {"text": f"请打开 {root} 这个项目，按里面的 PORTRAIT.md 帮我写一份“本命侧写”，写好存回书架。"
+                        "（账号凭据在 secrets 表里，不要读。）"}
+
     @app.get("/api/portrait/prompt")
     def portrait_prompt():
         from .portrait import full_prompt

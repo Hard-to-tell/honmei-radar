@@ -149,6 +149,7 @@ def summary(db: DB) -> dict:
     tag_count: Counter = Counter()
     author_count: Counter = Counter()
     author_name: dict[str, str] = {}
+    author_works: dict[str, list[Work]] = defaultdict(list)
     parody_count: Counter = Counter()
     parody_name: dict[str, str] = {}
     group_count: Counter = Counter()
@@ -162,6 +163,7 @@ def summary(db: DB) -> dict:
             if k and k not in NOISY_AUTHORS and len(k) > 1:
                 author_count[k] += 1
                 author_name.setdefault(k, a)
+                author_works[k].append(w)
         for p in {norm_parody(x) for x in w.parodies}:
             k = norm(p)
             if k and "comic" not in k and "快乐天" not in k and k != "ai":
@@ -270,7 +272,20 @@ def summary(db: DB) -> dict:
 
     fb = Counter(r["label"] for r in db.q("SELECT label FROM feedback"))
     top_tags = [{"tag": t, "count": c, "share": round(c / n, 3)} for t, c in tag_count.most_common(30)]
-    loyal = [{"name": author_name[k], "count": c} for k, c in author_count.most_common(10) if c >= 2]
+    def _recent(ws: list[Work], k: int = 3) -> list[dict]:
+        by_rank = {(w.site, w.wid): r for w, r in favs}
+        return [_brief(w) for w in sorted(ws, key=lambda w: by_rank.get((w.site, w.wid), 1e9))[:k]]
+    loyal = [{"name": author_name[k], "count": c, "works": _recent(author_works[k]) if i < 8 else []}
+             for i, (k, c) in enumerate(author_count.most_common(10)) if c >= 2]
+    # 封面墙：本命 → 各簇代表作 → 最新收藏
+    mosaic, seen_m = [], set()
+    pool = honmei + [b for c in clusters for b in c.get("works", [])] + [_brief(w) for w, r in sorted(favs, key=lambda x: x[1])[:24]]
+    for b in pool:
+        if (b["site"], b["wid"]) not in seen_m:
+            seen_m.add((b["site"], b["wid"]))
+            mosaic.append(b)
+        if len(mosaic) >= 18:
+            break
 
     return {
         "empty": False,
@@ -296,6 +311,7 @@ def summary(db: DB) -> dict:
         "lonely_tags": {"count": len(lonely_tags), "examples": lonely_tags[:12]},
         "one_book_authors": one_book_authors,
         "honmei": honmei,
+        "mosaic": mosaic,
         "hidden_tags": sorted(hidden),
         "feedback": {"want": fb.get("want", 0), "skip": fb.get("skip", 0), "dislike": fb.get("dislike", 0), "seen": fb.get("seen", 0), "seen_like": fb.get("seen_like", 0)},
     }

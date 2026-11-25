@@ -36,7 +36,12 @@ class AnalyzeError(Exception):
 
 
 class NoModelError(AnalyzeError):
-    """这个引擎的模型你的账号都用不了（可以换别的引擎再试）。"""
+    """这个引擎现在用不了（模型都不支持，或者登录过期），可以换别的引擎再试。"""
+
+
+_AUTH_ERR = ("401", "unauthorized", "expired", "authenticate", "not logged in", "log in", "login", "re-auth")
+LOGIN_HINT = {"codex": "在命令行运行一次 codex login 重新登录", "claude": "在命令行运行一次 claude，按提示重新登录",
+              "api": "检查设置里的 API Key"}
 
 
 def _which(name: str) -> str | None:
@@ -123,6 +128,8 @@ def _with_models(kind: str, models: list[str], call) -> str:
         except AnalyzeError as e:
             last = str(e)
             log.warning("%s 模型 %s 失败：%s", kind, m or "（默认）", _clean_error(last))
+            if any(k in last.lower() for k in _AUTH_ERR) and not any(k in last.lower() for k in _MODEL_ERR):
+                raise NoModelError(f"{ENGINE_NAMES.get(kind, kind)}：登录过期了（{LOGIN_HINT.get(kind, '重新登录')}）")
             if any(k in last.lower() for k in _MODEL_ERR):
                 tried.append(f"{m or '默认'}：{_clean_error(last)[:120]}")
                 continue
@@ -130,7 +137,8 @@ def _with_models(kind: str, models: list[str], call) -> str:
         if not custom and ok != m:
             save_settings({"analyze": {**a, f"{kind}_model_ok": m}})
         return out
-    raise NoModelError(f"{ENGINE_NAMES.get(kind, kind)} 试过的模型你的账号都用不了。\n" + "\n".join(tried))
+    raise NoModelError(f"{ENGINE_NAMES.get(kind, kind)}：试过的 {len(tried)} 个模型你的账号都用不了（详情在 data/app.log；"
+                       f"可以在 设置 → 解读 → 模型 里填一个能用的）")
 
 
 def _run_codex(prompt: str) -> str:
@@ -187,7 +195,7 @@ def run(prompt: str, engine: str | None = None) -> tuple[str, str]:
             return _run_one(e, prompt, s), e
         except NoModelError as err:
             errors.append(str(err))
-    raise AnalyzeError("\n\n".join(errors) + "\n\n可以在 设置 → 解读 → 模型 里填一个你账号能用的模型名。")
+    raise AnalyzeError("\n".join(errors))
 
 
 # ---------- 提示词 ----------
