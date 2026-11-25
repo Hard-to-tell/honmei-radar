@@ -120,10 +120,28 @@ def _brief(w: Work) -> dict:
             "authors": w.authors[:2], "cover": f"/api/cover/{w.site}/{w.wid}", "url": w.url}
 
 
+HIDDEN_KEY = "report:hidden_tags"
+
+
+def hidden_tags(db: DB) -> list[str]:
+    return list(db.kv_get(HIDDEN_KEY) or [])
+
+
+def set_hidden(db: DB, tag: str, hidden: bool) -> list[str]:
+    cur = hidden_tags(db)
+    t = (norm_tags([tag]) or [norm(tag)])[0] if tag else ""
+    if not t:
+        return cur
+    cur = [x for x in cur if x != t] + ([t] if hidden else [])
+    db.kv_set(HIDDEN_KEY, cur)
+    return cur
+
+
 def summary(db: DB) -> dict:
     favs = _favorites(db)
     if not favs:
         return {"empty": True}
+    hidden = set(hidden_tags(db))     # 报告里屏蔽的词：从所有统计里拿掉（只影响报告和侧写，不影响推荐）
     per_site = Counter(w.site for w, _ in favs)
     n = len(favs)
 
@@ -136,7 +154,7 @@ def summary(db: DB) -> dict:
     group_count: Counter = Counter()
     color = long_ = 0
     for w, _ in favs:
-        ts = norm_tags(w.tags)
+        ts = [t for t in norm_tags(w.tags) if t not in hidden]
         tag_sets.append(ts)
         tag_count.update(set(ts))
         for a in set(w.authors):
@@ -237,7 +255,7 @@ def summary(db: DB) -> dict:
 
     # 调音里的本命
     honmei = []
-    for r in db.q("SELECT c.site, c.wid FROM calibration c WHERE c.level = 4 ORDER BY c.at DESC LIMIT 12"):
+    for r in db.q("SELECT c.site, c.wid FROM calibration c WHERE c.level = 4 ORDER BY c.at DESC LIMIT 40"):
         w = db.get_work(r["site"], r["wid"])
         if w:
             honmei.append(_brief(w))
@@ -278,6 +296,7 @@ def summary(db: DB) -> dict:
         "lonely_tags": {"count": len(lonely_tags), "examples": lonely_tags[:12]},
         "one_book_authors": one_book_authors,
         "honmei": honmei,
+        "hidden_tags": sorted(hidden),
         "feedback": {"want": fb.get("want", 0), "skip": fb.get("skip", 0), "dislike": fb.get("dislike", 0), "seen": fb.get("seen", 0), "seen_like": fb.get("seen_like", 0)},
     }
 
@@ -323,3 +342,21 @@ def llm_digest(s: dict, db: DB | None = None) -> dict:
         "只收过一本的作者数": s.get("one_book_authors"),
         "只出现过一次的标签数": (s.get("lonely_tags") or {}).get("count"),
     }
+
+
+def search_favorites(db: DB, q: str, limit: int = 20) -> list[dict]:
+    """在收藏里按标题 / 作者找，给“手动添加本命”用。"""
+    q = norm(q or "")
+    if not q:
+        return []
+    honmei = {(r["site"], r["wid"]) for r in db.q("SELECT site, wid FROM calibration WHERE level = 4")}
+    out = []
+    for site in ("jm", "pica"):
+        for w in db.collection(site):
+            hay = norm(w.title) + " " + " ".join(norm_person(a) for a in w.authors)
+            if q in hay:
+                out.append({**_brief(w), "honmei": (w.site, w.wid) in honmei})
+                if len(out) >= limit:
+                    return out
+    return out
+

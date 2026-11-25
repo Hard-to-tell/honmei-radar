@@ -25,7 +25,7 @@ from .normalize import parse_title
 ENGINE_NAMES = {"api": "API", "codex": "Codex", "claude": "Claude Code"}
 TIMEOUT = 240
 # 默认用便宜一点的模型；某个模型你的账号用不了就自动换下一个，最后才用你本机的默认模型
-CODEX_MODELS = ["gpt-6.1-sol", "gpt-6-luna", "gpt-6.1-terra", ""]
+CODEX_MODELS = ["gpt-6.1-sol", "gpt-6.2-sol", "gpt-6-luna", "gpt-6.1-terra", ""]
 CLAUDE_MODELS = ["sonnet", ""]
 _MODEL_ERR = ("model_not_found", "not supported", "not_in_accessible_catalog", "does not exist",
               "invalid model", "unknown model", "model not found", "not available")
@@ -33,6 +33,10 @@ _MODEL_ERR = ("model_not_found", "not supported", "not_in_accessible_catalog", "
 
 class AnalyzeError(Exception):
     pass
+
+
+class NoModelError(AnalyzeError):
+    """这个引擎的模型你的账号都用不了（可以换别的引擎再试）。"""
 
 
 def _which(name: str) -> str | None:
@@ -110,19 +114,23 @@ def _with_models(kind: str, models: list[str], call) -> str:
     if ok is not None and not custom:
         order.append(ok)
     order += [m for m in models if m not in order]
-    last = ""
+    import logging
+    log = logging.getLogger("honmei")
+    tried: list[str] = []
     for m in order:
         try:
             out = call(m)
         except AnalyzeError as e:
             last = str(e)
+            log.warning("%s 模型 %s 失败：%s", kind, m or "（默认）", _clean_error(last))
             if any(k in last.lower() for k in _MODEL_ERR):
+                tried.append(f"{m or '默认'}：{_clean_error(last)[:120]}")
                 continue
             raise AnalyzeError(_clean_error(last))
         if not custom and ok != m:
             save_settings({"analyze": {**a, f"{kind}_model_ok": m}})
         return out
-    raise AnalyzeError("试过的模型你的账号都用不了：" + _clean_error(last))
+    raise NoModelError(f"{ENGINE_NAMES.get(kind, kind)} 试过的模型你的账号都用不了。\n" + "\n".join(tried))
 
 
 def _run_codex(prompt: str) -> str:
@@ -155,18 +163,31 @@ def _run_claude(prompt: str) -> str:
     return _with_models("claude", CLAUDE_MODELS, call)
 
 
+def _run_one(engine: str, prompt: str, s: dict) -> str:
+    if engine == "api":
+        return _run_api(prompt, s)
+    if engine == "codex":
+        return _run_codex(prompt)
+    return _run_claude(prompt)
+
+
 def run(prompt: str, engine: str | None = None) -> tuple[str, str]:
     s = load_settings()
-    engine = engine or pick_engine(s)
-    if not engine:
+    first = engine or pick_engine(s)
+    if not first:
         raise AnalyzeError("没有可用的解读引擎：在设置里填一个 API，或在本机安装 Codex / Claude Code")
-    if not available(s).get(engine):
-        raise AnalyzeError(f"{ENGINE_NAMES.get(engine, engine)} 不可用")
-    if engine == "api":
-        return _run_api(prompt, s), engine
-    if engine == "codex":
-        return _run_codex(prompt), engine
-    return _run_claude(prompt), engine
+    avail = available(s)
+    if not avail.get(first):
+        raise AnalyzeError(f"{ENGINE_NAMES.get(first, first)} 不可用")
+    # 一个引擎的模型全都用不了时，自动换本机另一个可用的引擎
+    order = [first] + [e for e in ("codex", "claude", "api") if e != first and avail.get(e)]
+    errors = []
+    for e in order:
+        try:
+            return _run_one(e, prompt, s), e
+        except NoModelError as err:
+            errors.append(str(err))
+    raise AnalyzeError("\n\n".join(errors) + "\n\n可以在 设置 → 解读 → 模型 里填一个你账号能用的模型名。")
 
 
 # ---------- 提示词 ----------

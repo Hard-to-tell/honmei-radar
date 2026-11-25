@@ -90,6 +90,25 @@ def create_app(service: Service | None = None) -> FastAPI:
         from .insights import summary
         return summary(svc.db)
 
+    @app.post("/api/report/hidden")
+    def report_hidden(body: dict = Body(...)):
+        from .insights import set_hidden
+        return {"hidden_tags": set_hidden(svc.db, str(body.get("tag") or ""), bool(body.get("hidden", True)))}
+
+    @app.get("/api/favorites/search")
+    def favorites_search(q: str = ""):
+        from .insights import search_favorites
+        return {"items": search_favorites(svc.db, q)}
+
+    @app.post("/api/honmei")
+    def honmei(body: dict = Body(...)):
+        """手动添加 / 去掉本命（记成调音里的“本命”评分）。"""
+        if not body.get("site") or not body.get("wid"):
+            raise HTTPException(400, "缺少作品")
+        on = bool(body.get("on", True))
+        svc.db.set_calibration(body["site"], str(body["wid"]), 4 if on else None, [], 0, "fav")
+        return {"ok": True}
+
     @app.get("/api/calibrate/next")
     def calibrate_next():
         return svc.calibrate_next()

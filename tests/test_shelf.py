@@ -238,3 +238,35 @@ def test_seen_like_counts_as_positive(svc):
     rows = training_rows(svc.db)
     assert [r["y"] for r in rows] == [1]          # 读过·喜欢 = 正例；单纯读过不参与
     assert svc.status()["feedback_counts"].get("读过·喜欢") == 1
+
+
+def test_report_hide_tags_and_manual_honmei(svc):
+    from fastapi.testclient import TestClient
+    from manga_shelf.importer import import_favorites
+    from manga_shelf.server import create_app
+    import_favorites(svc.db, svc.adapter("jm"))
+    c = TestClient(create_app(svc))
+    top = c.get("/api/insights").json()["top_tags"][0]["tag"]
+    assert top in c.post("/api/report/hidden", json={"tag": top, "hidden": True}).json()["hidden_tags"]
+    d = c.get("/api/insights").json()
+    assert top not in [t["tag"] for t in d["top_tags"]] and d["hidden_tags"] == [top]
+    c.post("/api/report/hidden", json={"tag": top, "hidden": False})
+    fav = svc.db.collection("jm")[0]
+    q = fav.authors[0] if fav.authors else fav.title[:4]
+    items = c.get("/api/favorites/search", params={"q": q}).json()["items"]
+    assert any(i["wid"] == fav.wid for i in items)
+    c.post("/api/honmei", json={"site": "jm", "wid": fav.wid, "on": True})
+    assert fav.wid in [b["wid"] for b in c.get("/api/insights").json()["honmei"]]
+    c.post("/api/honmei", json={"site": "jm", "wid": fav.wid, "on": False})
+    assert not c.get("/api/insights").json()["honmei"]
+
+
+def test_engine_fallback_when_models_unavailable(monkeypatch):
+    from manga_shelf import analyzer
+    monkeypatch.setattr(analyzer, "available", lambda s=None: {"api": False, "codex": True, "claude": True})
+    monkeypatch.setattr(analyzer, "pick_engine", lambda s=None: "codex")
+    def codex(prompt):
+        raise analyzer.NoModelError("Codex 试过的模型你的账号都用不了。")
+    monkeypatch.setattr(analyzer, "_run_codex", codex)
+    monkeypatch.setattr(analyzer, "_run_claude", lambda p: "ok")
+    assert analyzer.run("hi") == ("ok", "claude")
