@@ -89,3 +89,30 @@ def save_external(db: DB, text: str, engine_name: str = "外部 AI") -> dict:
     history.insert(0, out)
     db.kv_set("portraits", history[:10])
     return out
+
+
+def import_inbox(db: DB) -> int:
+    """data/portrait_inbox/ 里放着的画像（AI 写好丢进来的 .json）自动存进报告，存完改名成 .imported。
+    文件可以就是画像 JSON，也可以是 {"engine_name": "谁写的", "portrait": {...}}。"""
+    import json as _json
+    from .config import data_dir
+    box = data_dir() / "portrait_inbox"
+    if not box.is_dir():
+        return 0
+    n = 0
+    for f in sorted(box.glob("*.json")):
+        try:
+            text = f.read_text("utf-8")
+            obj = _json.loads(text)
+            name = "外部 AI"
+            if isinstance(obj, dict) and isinstance(obj.get("portrait"), dict):
+                name = str(obj.get("engine_name") or name)[:40]
+                text = _json.dumps(obj["portrait"], ensure_ascii=False)
+            save_external(db, text, name)
+            f.rename(f.with_suffix(".imported"))
+            n += 1
+        except Exception as e:  # 坏文件留着，别挡住报告
+            import logging
+            logging.getLogger("honmei").warning("画像收件箱 %s 没导入：%s", f.name, e)
+    return n
+

@@ -270,3 +270,19 @@ def test_engine_fallback_when_models_unavailable(monkeypatch):
     monkeypatch.setattr(analyzer, "_run_codex", codex)
     monkeypatch.setattr(analyzer, "_run_claude", lambda p: "ok")
     assert analyzer.run("hi") == ("ok", "claude")
+
+
+def test_portrait_inbox(svc):
+    import json
+    from manga_shelf.config import data_dir
+    from manga_shelf.importer import import_favorites
+    from manga_shelf.portrait import import_inbox
+    import_favorites(svc.db, svc.adapter("jm"))
+    box = data_dir() / "portrait_inbox"
+    box.mkdir(exist_ok=True)
+    (box / "a.json").write_text(json.dumps({"engine_name": "测试", "portrait": {"title": "测试称号", "one_liner": "x",
+        "keywords": [], "serious": [], "bold": []}}, ensure_ascii=False), "utf-8")
+    assert import_inbox(svc.db) == 1
+    p = svc.db.kv_get("portraits")[0]
+    assert p["engine_name"] == "测试" and p["data"]["title"] == "测试称号"
+    assert (box / "a.imported").exists() and import_inbox(svc.db) == 0

@@ -147,6 +147,8 @@ def create_app(service: Service | None = None) -> FastAPI:
 
     @app.get("/api/portrait")
     def portrait():
+        from .portrait import import_inbox
+        import_inbox(svc.db)
         h = svc.db.kv_get("portraits", [])
         return h[0] if h else {}
 

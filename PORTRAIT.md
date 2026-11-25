@@ -13,6 +13,7 @@
 4. **存回去**：把 JSON 存成 `portrait.json`，运行
    `python -m manga_shelf portrait-import portrait.json --name "你的名字（比如 Claude 桌面端）"`
    然后告诉用户：打开书架顶栏的“本命报告”，滑到最后就能看到。
+   拿不到 Python 环境时，也可以把 JSON 存进 `data/portrait_inbox/`（任意文件名 `.json`），书架下次打开报告时会自动收进去。
 5. 也可以直接在对话里把画像念给用户听，但仍然建议存回去，报告页排版更好看。
 
 底线（和提示词里一致）：不做道德评判、不做精神疾病诊断、不写露骨描写；年龄看起来偏小的标签只当画风设定中性带过；
