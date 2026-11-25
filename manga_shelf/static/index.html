@@ -1,0 +1,760 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>本命 HONMEI</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23FFD21F'/%3E%3Ctext x='32' y='45' font-size='38' text-anchor='middle' font-family='sans-serif' font-weight='900' fill='%23111'%3E本%3C/text%3E%3C/svg%3E">
+<style>
+:root {
+  --bg: #0c0c0c; --bg2: #141414; --panel: #1a1a1a; --panel2: #222; --line: #2c2c2c;
+  --ink: #f2efe6; --muted: #9a958a; --faint: #6b665d;
+  --y: #ffd21f; --y2: #ffe36b; --y-ink: #121212; --y-soft: rgba(255,210,31,.12);
+  --want: #ffd21f; --skip: #ff5a5f; --seen: #8a93a6;
+  --radius: 14px;
+}
+* { box-sizing: border-box; }
+html, body { background: var(--bg); }
+body { margin: 0; color: var(--ink);
+  font: 14px/1.55 "Segoe UI", system-ui, -apple-system, "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", sans-serif; }
+a { color: inherit; }
+button, select, input { font: inherit; color: inherit; }
+::selection { background: var(--y); color: var(--y-ink); }
+
+/* ---------- 顶栏 ---------- */
+header { position: sticky; top: 0; z-index: 20; background: rgba(12,12,12,.86); backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line); }
+.bar { max-width: 1320px; margin: 0 auto; padding: 12px 16px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+.brand { display: flex; align-items: center; gap: 10px; text-decoration: none; }
+.logo { width: 34px; height: 34px; border-radius: 9px; background: var(--y); color: var(--y-ink);
+  display: grid; place-items: center; font-weight: 900; font-size: 20px; letter-spacing: 0; }
+.word { display: flex; flex-direction: column; line-height: 1.05; }
+.word b { font-size: 17px; letter-spacing: .14em; }
+.word small { color: var(--muted); font-size: 11px; letter-spacing: .04em; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { border: 1px solid var(--line); background: var(--bg2); color: var(--muted); border-radius: 999px; padding: 2px 10px; font-size: 12px; white-space: nowrap; }
+.chip b { color: var(--ink); font-weight: 600; }
+.spacer { flex: 1; }
+.btn { border: 1px solid var(--line); background: var(--panel); border-radius: 10px; padding: 7px 14px; cursor: pointer; transition: border-color .15s, background .15s; white-space: nowrap; }
+.btn:hover { border-color: #4a4a4a; background: var(--panel2); }
+.btn.y { background: var(--y); color: var(--y-ink); border-color: var(--y); font-weight: 700; }
+.btn.y:hover { background: var(--y2); }
+.btn.ghost { background: transparent; }
+.btn.sm { padding: 4px 10px; font-size: 13px; border-radius: 8px; }
+.btn:disabled { opacity: .5; cursor: default; }
+select.sel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 7px 10px; max-width: 260px; }
+
+main { max-width: 1320px; margin: 0 auto; padding: 16px 16px 60px; }
+
+/* ---------- 任务面板 ---------- */
+#tasks { display: flex; flex-direction: column; gap: 8px; margin-bottom: 14px; }
+.task { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 14px; display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; }
+.task .t { font-weight: 600; }
+.task .m { color: var(--muted); font-size: 13px; grid-column: 1 / -1; min-height: 20px; }
+.task .r { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.track { grid-column: 1 / -1; height: 6px; border-radius: 99px; background: #2a2a2a; overflow: hidden; }
+.fill { height: 100%; background: var(--y); border-radius: 99px; transition: width .4s ease; }
+.fill.indet { width: 30% !important; animation: indet 1.2s ease-in-out infinite; }
+@keyframes indet { 0% { transform: translateX(-100%); } 100% { transform: translateX(340%); } }
+.task.err { border-color: rgba(255,90,95,.5); }
+.task.err .m { color: var(--skip); }
+.task.ok .fill { background: #7bd88f; }
+.task .fl { grid-column: 1 / -1; color: var(--y); font-size: 12.5px; opacity: .85; letter-spacing: .02em; animation: flin .5s ease; }
+@keyframes flin { from { opacity: 0; transform: translateY(3px); } to { opacity: .85; transform: none; } }
+.dotbtn { position: relative; }
+.dotbtn i { position: absolute; top: 5px; right: 6px; width: 7px; height: 7px; border-radius: 50%; background: var(--y); box-shadow: 0 0 0 2px var(--bg); }
+#calDlg { width: min(560px, calc(100vw - 24px)); }
+.cal { padding: 16px 18px 18px; }
+.cal .steps { display: flex; gap: 6px; margin-bottom: 12px; }
+.cal .steps span { flex: 1; height: 4px; border-radius: 4px; background: #2a2a2a; }
+.cal .steps span.on { background: var(--y); }
+.cal .cv { display: grid; grid-template-columns: 150px 1fr; gap: 14px; align-items: start; }
+.cal .cv img { width: 150px; aspect-ratio: 3/4; object-fit: cover; border-radius: 10px; background: #1b1b1b; }
+.cal .ti { font-size: 17px; font-weight: 700; line-height: 1.35; margin-bottom: 6px; }
+.cal .meta { color: var(--muted); font-size: 12.5px; margin-bottom: 8px; }
+.cal .tg { display: flex; flex-wrap: wrap; gap: 4px; }
+.cal .tg span { background: #232323; border-radius: 999px; padding: 0 8px; font-size: 12px; color: #cfc9bd; }
+.cal .rs { display: flex; flex-wrap: wrap; gap: 6px; margin: 16px 0 12px; align-items: center; }
+.cal .rs .lbl { color: var(--muted); font-size: 12.5px; margin-right: 2px; }
+.pill { border: 1px solid var(--line); background: transparent; color: var(--ink); border-radius: 999px; padding: 3px 12px; font: inherit; font-size: 13px; cursor: pointer; }
+.pill.on { background: var(--y); color: var(--y-ink); border-color: var(--y); font-weight: 700; }
+.pill.sub { font-size: 12px; padding: 2px 10px; }
+.lv4 { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+.lv4 button { --c: #4a4a4a; border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 12px; padding: 12px 4px;
+  font: inherit; font-weight: 700; cursor: pointer; transition: border-color .15s, background .15s, transform .08s, box-shadow .15s; }
+.lv4 button.l4 { --c: #ffd21f; } .lv4 button.l3 { --c: #ffe680; } .lv4 button.l2 { --c: #8a93a6; } .lv4 button.l1 { --c: #ff5a5f; }
+.lv4 button:hover, .lv4 button:focus-visible { border-color: var(--c); box-shadow: 0 0 0 1px var(--c) inset; outline: none; }
+.lv4 button:active { transform: scale(.96); }
+.lv4 button.on { background: var(--c); border-color: var(--c); color: #111; }
+.lv4 button small { display: block; font-weight: 400; color: var(--muted); font-size: 11px; margin-top: 2px; }
+.lv4 button.on small { color: rgba(0,0,0,.55); }
+.cal .cv a.cvimg { display: block; position: relative; border-radius: 10px; overflow: hidden; }
+.cal .cv a.cvimg:hover img { transform: scale(1.03); }
+.cal .cv img { transition: transform .25s; }
+.cal .ti a { color: inherit; text-decoration: none; }
+.cal .ti a:hover { color: var(--y); }
+.cal .open { display: inline-block; margin-top: 10px; color: var(--y); font-size: 13px; text-decoration: none; }
+.cal .open:hover { text-decoration: underline; }
+.cal .nav { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; }
+.cal .nav button { background: none; border: none; color: var(--muted); cursor: pointer; font: inherit; font-size: 13px; padding: 4px 6px; border-radius: 6px; }
+.cal .nav button:hover:not(:disabled) { color: var(--ink); background: #222; }
+.cal .nav button:disabled { opacity: .35; cursor: default; }
+.pill:hover { border-color: var(--y); }
+.cal .sum { font-size: 16px; line-height: 1.6; margin: 4px 0 14px; }
+.cal .sumrow { display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: center; padding: 7px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+.cal .sumrow select { background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 8px; padding: 3px 6px; font: inherit; font-size: 12.5px; }
+.cal .wait { color: var(--y); min-height: 24px; margin: 18px 0; text-align: center; }
+@media (max-width: 560px) { .cal .cv { grid-template-columns: 100px 1fr; } .cal .cv img { width: 100px; } .lv4 { grid-template-columns: repeat(2, 1fr); } }
+
+/* ---------- 批次信息与筛选 ---------- */
+.head { display: flex; align-items: flex-end; gap: 12px; flex-wrap: wrap; margin: 6px 0 14px; }
+.head h2 { margin: 0; font-size: 22px; letter-spacing: .02em; }
+.head h2 span { color: var(--y); }
+.head .sub { color: var(--muted); font-size: 13px; }
+.tabs { display: flex; gap: 4px; background: var(--bg2); border: 1px solid var(--line); padding: 3px; border-radius: 10px; }
+.tabs button { border: 0; background: transparent; padding: 4px 12px; border-radius: 7px; cursor: pointer; color: var(--muted); }
+.tabs button.on { background: var(--y); color: var(--y-ink); font-weight: 700; }
+.note { color: var(--muted); font-size: 13px; background: var(--bg2); border: 1px dashed var(--line); border-radius: 10px; padding: 8px 12px; margin-bottom: 14px; }
+.note .warn { color: var(--skip); }
+
+/* ---------- 卡片 ---------- */
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(208px, 1fr)); gap: 18px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; display: flex; flex-direction: column; transition: transform .15s, border-color .15s; }
+.card:hover { border-color: #444; transform: translateY(-2px); }
+.card.fb-want { border-color: var(--y); box-shadow: 0 0 0 1px var(--y) inset; }
+.card.fb-skip, .card.fb-seen, .card.fb-dislike { opacity: .45; }
+.cover { position: relative; aspect-ratio: 3 / 4; background: linear-gradient(160deg, #222, #151515); display: block; overflow: hidden; }
+.cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.ph { position: absolute; inset: 0; display: grid; place-items: center; padding: 18px; text-align: center; color: var(--faint); font-size: 13px; }
+.cover::after { content: ""; position: absolute; inset: auto 0 0 0; height: 40%; background: linear-gradient(transparent, rgba(0,0,0,.75)); pointer-events: none; }
+.pos { position: absolute; z-index: 2; left: 10px; top: 10px; background: var(--y); color: var(--y-ink); font-weight: 800; border-radius: 7px; min-width: 26px; text-align: center; padding: 0 7px; font-size: 13px; }
+.route { position: absolute; z-index: 2; right: 10px; top: 10px; background: rgba(0,0,0,.7); border: 1px solid rgba(255,255,255,.15); color: #eee; border-radius: 7px; padding: 0 8px; font-size: 12px; }
+.score { position: absolute; z-index: 2; right: 10px; bottom: 8px; color: var(--y); font-size: 12px; font-weight: 700; }
+.body { padding: 11px 12px 12px; display: flex; flex-direction: column; gap: 7px; flex: 1; }
+.title { font-weight: 650; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-decoration: none; }
+.title:hover { color: var(--y); }
+.meta { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.reason { font-size: 12.5px; color: #d9d4c7; border-left: 2px solid var(--y); padding: 2px 0 2px 8px; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.tag { font-size: 11.5px; background: var(--bg2); border: 1px solid var(--line); color: var(--muted); border-radius: 999px; padding: 0 8px; }
+.why { align-self: flex-start; background: none; border: 0; padding: 0; color: var(--y); font-size: 12px; cursor: pointer; }
+.why:hover { text-decoration: underline; }
+.acts { display: grid; grid-template-columns: 1.2fr 1fr 1fr 1fr; gap: 5px; margin-top: auto; padding-top: 4px; }
+.acts button { border: 1px solid var(--line); background: var(--bg2); border-radius: 9px; padding: 6px 0; cursor: pointer; font-size: 12px; color: var(--muted); white-space: nowrap; overflow: hidden; }
+.acts button:hover { color: var(--ink); border-color: #4a4a4a; }
+.acts button.want.on { background: var(--y); border-color: var(--y); color: var(--y-ink); font-weight: 700; }
+.acts button.skip.on { background: var(--skip); border-color: var(--skip); color: #fff; }
+.acts button.dislike.on { background: #6b1f22; border-color: var(--skip); color: #fff; }
+.acts button.seen.on { background: var(--seen); border-color: var(--seen); color: #111; }
+.card.fb-seen_like { border-color: #6d6a5c; }
+.seenq { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--muted); }
+.seenq button { border: 1px solid var(--line); background: none; color: var(--muted); border-radius: 999px; padding: 2px 10px; font-size: 12px; cursor: pointer; transition: color .15s, border-color .15s, background .15s; }
+.seenq button:hover { color: var(--y); border-color: var(--y); }
+.seenq button.on { background: var(--y); border-color: var(--y); color: var(--y-ink); font-weight: 700; }
+
+/* ---------- 起步引导 ---------- */
+.onb { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; margin-top: 10px; }
+.step { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.step h3 { margin: 0; font-size: 15px; display: flex; gap: 8px; align-items: center; }
+.num { width: 22px; height: 22px; border-radius: 50%; background: var(--y); color: var(--y-ink); display: grid; place-items: center; font-size: 12px; font-weight: 800; }
+.step.done .num { background: #7bd88f; }
+.step p { margin: 0; color: var(--muted); font-size: 13px; }
+.hero { padding: 26px 0 8px; }
+.hero h1 { margin: 0 0 6px; font-size: 28px; }
+.hero h1 span { color: var(--y); }
+.hero p { margin: 0; color: var(--muted); }
+
+/* ---------- 侧栏设置 ---------- */
+.drawer { position: fixed; inset: 0; z-index: 50; display: none; }
+.drawer.on { display: block; }
+.drawer .mask { position: absolute; inset: 0; background: rgba(0,0,0,.55); }
+.drawer .pane { position: absolute; right: 0; top: 0; bottom: 0; width: min(460px, 100vw); background: var(--bg2); border-left: 1px solid var(--line); overflow-y: auto; padding: 0 18px 30px; }
+.pane-h { position: sticky; top: 0; background: var(--bg2); display: flex; align-items: center; padding: 16px 0 12px; border-bottom: 1px solid var(--line); margin-bottom: 12px; z-index: 1; }
+.pane-h h2 { margin: 0; font-size: 17px; flex: 1; }
+.sec { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; margin-bottom: 12px; }
+.sec h4 { margin: 0 0 8px; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+.sec h4 .st { margin-left: auto; font-weight: 400; font-size: 12px; color: var(--muted); }
+.ok { color: #7bd88f; } .bad { color: var(--skip); } .y { color: var(--y); }
+.form { display: grid; gap: 8px; }
+.inp { width: 100%; background: var(--bg); border: 1px solid var(--line); border-radius: 9px; padding: 7px 10px; }
+.inp:focus, select.sel:focus { outline: none; border-color: var(--y); }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 13px; }
+.kv span:nth-child(odd) { color: var(--muted); }
+.hint { color: var(--faint); font-size: 12px; margin: 6px 0 0; }
+details.adv summary { cursor: pointer; color: var(--muted); padding: 4px 0; }
+details.adv[open] summary { color: var(--ink); margin-bottom: 8px; }
+label.lb { color: var(--muted); font-size: 12px; }
+.switch { position: relative; width: 40px; height: 22px; flex: none; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.switch span { position: absolute; inset: 0; background: #333; border-radius: 99px; transition: .2s; cursor: pointer; }
+.switch span::before { content: ""; position: absolute; width: 16px; height: 16px; left: 3px; top: 3px; background: #ddd; border-radius: 50%; transition: .2s; }
+.switch input:checked + span { background: var(--y); }
+.switch input:checked + span::before { transform: translateX(18px); background: #111; }
+input[type=range] { accent-color: var(--y); flex: 1; }
+
+/* ---------- 弹窗 ---------- */
+dialog { border: 1px solid var(--line); border-radius: 16px; background: var(--bg2); color: var(--ink); padding: 0; width: min(640px, calc(100vw - 32px)); max-height: calc(100vh - 48px); }
+dialog::backdrop { background: rgba(0,0,0,.6); }
+.dlg-h { display: flex; align-items: center; padding: 14px 18px; border-bottom: 1px solid var(--line); }
+.dlg-h h2 { font-size: 16px; margin: 0; flex: 1; }
+.dlg-b { padding: 14px 18px 18px; }
+pre.expl { white-space: pre-wrap; background: var(--panel); border: 1px solid var(--line); padding: 12px 14px; border-radius: 10px; font: inherit; font-size: 13px; margin: 0 0 10px; }
+
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: var(--y); color: var(--y-ink); font-weight: 600; padding: 8px 16px; border-radius: 10px; z-index: 60; opacity: 0; transition: opacity .2s; pointer-events: none; }
+.toast.on { opacity: 1; }
+.empty-msg { text-align: center; color: var(--muted); padding: 40px 0; }
+
+@media (max-width: 560px) {
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .word small, .chips { display: none; }
+  .bar { gap: 8px; }
+  select.sel { max-width: 150px; }
+  .acts { grid-template-columns: 1fr 1fr; }
+}
+a.btn { text-decoration: none; display: inline-flex; align-items: center; }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <a class="brand" href="#" onclick="return false">
+      <div class="logo">本</div>
+      <div class="word"><b>HONMEI</b><small>替你找下一本本命</small></div>
+    </a>
+    <div class="chips" id="chips"></div>
+    <span class="spacer"></span>
+    <select class="sel" id="batchSel" title="历史批次"></select>
+    <button class="btn dotbtn" id="calBtn" title="给几本作品打分，让推荐更懂你" onclick="openCal()">调音 · 5 本</button>
+    <a class="btn" id="repBtn" href="/report" title="你的口味年报：统计看板 + AI 画像">本命报告</a>
+    <button class="btn" id="anaBtn" title="请 Codex / Claude / API 解读这一卷">✧ 解读</button>
+    <button class="btn y" id="genBtn" title="翻开新的一卷推荐">开卷 ✦</button>
+    <button class="btn" id="setBtn" title="账号与设置">设置</button>
+  </div>
+</header>
+
+<main>
+  <div id="tasks"></div>
+  <div id="content"></div>
+</main>
+
+<div class="drawer" id="drawer">
+  <div class="mask" onclick="closeDrawer()"></div>
+  <div class="pane">
+    <div class="pane-h"><h2>账号与设置</h2><button class="btn sm ghost" onclick="closeDrawer()">关闭</button></div>
+
+    <div class="sec" id="secPica"></div>
+    <div class="sec" id="secJm"></div>
+
+    <div class="sec">
+      <h4>网络 <span class="st" id="netWhen"></span></h4>
+      <div class="kv" id="netKv"></div>
+      <div class="row" style="margin-top:10px"><button class="btn sm" onclick="netCheck()">重新检测</button></div>
+      <p class="hint">自动尝试直连、系统代理和 Clash / v2rayN 等常见本地代理端口，用能连通的那个。</p>
+    </div>
+
+    <div class="sec">
+      <h4>解读 <span class="st" id="anaState"></span></h4>
+      <div class="row"><label class="lb" style="width:64px">解读者</label>
+        <select class="sel" id="anaEngine" style="flex:1;max-width:none"></select></div>
+      <div class="row" style="margin-top:8px"><label class="lb" style="width:64px">模型</label>
+        <input class="inp" id="anaModel" style="flex:1" placeholder="留空 = 自动，先用便宜的（Codex：gpt-6.1-sol；Claude：sonnet）"></div>
+      <p class="hint">“解读”会把这一卷的标题、作者、标签和推荐依据交给你选的解读者写一段卷首语；单本也能细读。账号密码不会发出去。本机装了 Codex 或 Claude Code 就能直接用，不用填任何东西。</p>
+    </div>
+
+    <div class="sec">
+      <h4>推荐</h4>
+      <div class="row"><label class="lb" style="width:64px">每批数量</label><input type="range" id="batchSize" min="8" max="48" step="4"><b id="batchSizeV" style="width:28px;text-align:right"></b></div>
+      <div class="row" style="margin-top:8px">
+        <label class="switch"><input type="checkbox" id="semOn"><span></span></label>
+        <div style="flex:1"><div>语义匹配</div><div class="hint" style="margin:0" id="semHint"></div></div>
+        <button class="btn sm" id="semInstall" hidden onclick="installSemantic()">一键安装</button>
+      </div>
+      <div class="hint" id="rankerState" style="margin-top:10px"></div>
+      <div class="row" style="margin-top:10px"><button class="btn sm" onclick="runEval()" title="把最新 20% 的禁漫收藏藏起来，看新旧算法谁能把它们找回来">检验算法</button>
+        <span class="hint" id="evalMsg" style="margin:0;flex:1"></span></div>
+    </div>
+
+    <div class="sec">
+      <details class="adv">
+        <summary>高级设置（一般不用改）</summary>
+        <div class="form">
+          <label class="lb">手动代理（留空 = 自动）</label><input class="inp" id="proxy" placeholder="例如 http://127.0.0.1:7890">
+          <label class="lb">禁漫网页域名（原作链接用）</label><input class="inp" id="jmDomain" placeholder="18comic.vip">
+          <label class="lb">哔咔作品链接模板</label><input class="inp" id="picaTpl">
+          <label class="lb">解读用的 OpenAI 兼容接口（可选，有 Codex / Claude Code 就不用填）</label>
+          <input class="inp" id="llmBase" placeholder="接口地址，例如 https://api.example.com/v1">
+          <input class="inp" id="llmKey" type="password" placeholder="API Key">
+          <input class="inp" id="llmModel" placeholder="模型名">
+          <div class="row"><button class="btn sm y" onclick="saveAdvanced()">保存</button><span class="hint" id="saveMsg" style="margin:0"></span></div>
+        </div>
+      </details>
+    </div>
+    <p class="hint" id="dataDir"></p>
+  </div>
+</div>
+
+<dialog id="calDlg">
+  <div class="dlg-h"><h2>为你的口味调音</h2><button class="btn sm ghost" onclick="closeCal()">关闭</button></div>
+  <div class="cal" id="calBody"></div>
+</dialog>
+
+<dialog id="whyDlg">
+  <div class="dlg-h"><h2 id="whyTitle">为何是它</h2><button class="btn sm ghost" onclick="whyDlg.close()">关闭</button></div>
+  <div class="dlg-b">
+    <pre class="expl" id="whyLocal"></pre>
+    <div id="whyDeepBox">
+      <div class="row"><input class="inp" id="whyQ" placeholder="想追问点什么（可不填）" style="flex:1"><button class="btn y sm" id="whyDeepBtn">细读</button></div>
+      <p class="hint" id="whyHint"></p>
+      <pre class="expl" id="whyDeep" hidden style="margin-top:10px"></pre>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="anaDlg">
+  <div class="dlg-h"><h2 id="anaTitle">卷首语</h2><button class="btn sm ghost" onclick="anaDlg.close()">关闭</button></div>
+  <div class="dlg-b">
+    <pre class="expl" id="anaText"></pre>
+    <div class="row"><span class="hint" id="anaFrom" style="margin:0;flex:1"></span><button class="btn y sm" id="anaRun">请它读这一卷</button></div>
+  </div>
+</dialog>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const LABEL = { want: "♥ 心动", skip: "略过", dislike: "不喜欢", seen: "读过", seen_like: "读过·喜欢" };
+const SITE = { pica: "哔咔", jm: "禁漫" };
+let S = { status: null, batch: null, filter: "all", settings: null };
+let pollTimer = null, lastRunning = new Set();
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, { headers: { "Content-Type": "application/json" }, ...opts });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.detail || ("请求失败 " + r.status));
+  return data;
+}
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const fmtTime = (t) => { const d = new Date(t * 1000); return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
+const ago = (t) => { const s = Date.now() / 1000 - t; return s < 90 ? "刚刚" : s < 3600 ? `${Math.round(s / 60)} 分钟前` : s < 86400 ? `${Math.round(s / 3600)} 小时前` : fmtTime(t); };
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("on"), 1800); }
+
+/* ---------- 状态 ---------- */
+async function loadStatus() {
+  const s = await api("/api/status");
+  S.status = s;
+  const p = s.sites.pica, j = s.sites.jm;
+  const fb = s.feedback_counts || {};
+  $("chips").innerHTML = (s.demo ? `<span class="chip y">演示数据</span>` : "") +
+    `<span class="chip">哔咔 <b>${p.favorites}</b></span><span class="chip">禁漫 <b>${j.favorites}</b></span>` +
+    `<span class="chip">心动 <b>${fb["心动"] || 0}</b></span>`;
+  const sel = $("batchSel");
+  sel.innerHTML = s.batches.length
+    ? s.batches.map(b => `<option value="${b.id}">Vol.${b.id} · ${fmtTime(b.created_at)}</option>`).join("")
+    : `<option value="">尚未开卷</option>`;
+  if (S.batch) sel.value = S.batch.id;
+  const cb = $("calBtn"); if (cb) cb.innerHTML = "调音 · 5 本" + (s.calibrate && s.calibrate.dot ? "<i></i>" : "");
+  renderDrawer();
+  renderTasks(s.jobs || []);
+  for (const j of s.jobs || []) if (j.status === "running") lastRunning.add(j.id);
+  if (lastRunning.size) startPolling();
+}
+
+/* ---------- 任务面板 ---------- */
+function renderTasks(jobs) {
+  const box = $("tasks");
+  box.innerHTML = jobs.map(j => {
+    const pct = j.total ? Math.min(100, Math.round(100 * (j.done || 0) / j.total)) : null;
+    let right = "";
+    if (j.status === "running" && j.total) {
+      right = `${j.done || 0} / ${j.total}`;
+      const el = Date.now() / 1000 - j.phase_started_at;
+      if (j.done > 2 && j.done < j.total) {
+        const eta = el / j.done * (j.total - j.done);
+        right += eta > 60 ? ` · 约 ${Math.ceil(eta / 60)} 分钟` : ` · 约 ${Math.ceil(eta)} 秒`;
+      }
+    } else if (j.status === "done") right = "完成";
+    else if (j.status === "error") right = `<button class="btn sm ghost" onclick="this.closest('.task').remove()">关闭</button>`;
+    const cls = j.status === "error" ? "err" : j.status === "done" ? "ok" : "";
+    const fill = j.status === "done" ? `style="width:100%"` : pct === null ? `class="fill indet"` : `style="width:${pct}%"`;
+    const msg = j.status === "error" ? j.error : (j.status === "done" ? doneText(j) : j.progress);
+    return `<div class="task ${cls}"><div class="t">${esc(j.title || j.kind)}</div><div class="r">${right}</div>
+      ${j.status === "error" ? "" : `<div class="track"><div class="fill" ${fill}></div></div>`}
+      <div class="m">${esc(msg)}</div>${j.status === "running" ? `<div class="fl" data-k="${esc(j.kind)}">${esc(flavor(j.kind))}</div>` : ""}</div>`;
+  }).join("");
+}
+/* ---------- 等待语 ---------- */
+const FLAVOR = [
+  "正在翻阅 {n} 本收藏的扉页……", "为 {k} 个口味簇各自定调", "比对标签在全站的稀有程度", "把哔咔的说法译成禁漫的说法",
+  "估算每一本与你的距离", "校准心动的阈值", "在冷门的角落多看一眼", "剔除你已经读过的同一本", "为这一卷排定先后", "写下“为何是它”",
+];
+const FLAVOR_CAL = ["正在重写你的口味谱", "把这一轮的回答记进书页", "重新称量每一簇的分量"];
+function flavor(kind, list) {
+  const off = [...(kind || "")].reduce((a, c) => a + c.charCodeAt(0), 0);
+  const L = list || FLAVOR, i = (Math.floor(Date.now() / 2500) + off) % L.length;
+  const st = S.status || {};
+  const n = st.sites ? (st.sites.pica.favorites + st.sites.jm.favorites) : "";
+  return L[i].replace("{n}", n || "你的").replace("{k}", st.clusters || "几");
+}
+setInterval(() => {
+  document.querySelectorAll(".task .fl").forEach(el => { const t = flavor(el.dataset.k); if (el.textContent !== t) { el.textContent = t; el.style.animation = "none"; el.offsetHeight; el.style.animation = ""; } });
+  document.querySelectorAll(".cal .wait").forEach(el => { el.textContent = flavor("cal", FLAVOR_CAL); });
+}, 500);
+function doneText(j) {
+  const r = j.result || {};
+  if (j.kind.startsWith("import")) return `已导入 ${r.count} 本` + (r.detail_failed ? `，${r.detail_failed} 本没取到标签（下次导入会补）` : "") +
+    (S.status && S.status.calibrate && !S.status.calibrate.rated ? "。可以点顶栏的“调音”给 5 本打分，推荐会更准" : "");
+  if (j.kind === "generate") return `Vol.${r.batch_id} 已成卷`;
+  if (j.kind.startsWith("analyze")) return `${r.engine_name || ""} 读完了` + (r.pos ? "，结果在“为何是它”里" : "，点“✧ 解读”查看");
+  if (j.kind === "net") return netSummary(r);
+  if (j.kind === "semantic") return "语义匹配已就绪，下一批开始使用";
+  if (j.kind === "eval") return r.summary || "检验完成，结果在设置里";
+  return "完成";
+}
+function startPolling() {
+  if (pollTimer) return;
+  pollTimer = setInterval(async () => {
+    let jobs;
+    try { jobs = await api("/api/jobs"); } catch (e) { return; }
+    renderTasks(jobs);
+    const running = new Set(jobs.filter(j => j.status === "running").map(j => j.id));
+    // 有任务刚结束：刷新数据
+    for (const id of lastRunning) if (!running.has(id)) {
+      const j = jobs.find(x => x.id === id);
+      await loadStatus();
+      if (j && j.kind === "generate" && j.status === "done") await loadBatch(j.result.batch_id);
+      else if (j && j.kind.startsWith("analyze") && j.status === "done") showAnalysis(j.result);
+      else if (j && j.kind.startsWith("analyze") && j.status === "error") showAnalysisError(j);
+      else if (!S.batch) render();
+    }
+    lastRunning = running;
+    $("genBtn").disabled = jobs.some(j => j.kind === "generate" && j.status === "running");
+    if (!running.size && !jobs.some(j => j.status === "done")) { clearInterval(pollTimer); pollTimer = null; }
+  }, 1000);
+}
+async function runJob(path, body) {
+  const { job } = await api(path, { method: "POST", body: JSON.stringify(body || {}) });
+  lastRunning.add(job);
+  const jobs = await api("/api/jobs"); renderTasks(jobs);
+  startPolling();
+  return job;
+}
+
+/* ---------- 批次 ---------- */
+async function loadBatch(id) {
+  try { S.batch = id ? await api("/api/batches/" + id) : await api("/api/batches/latest"); }
+  catch (e) { S.batch = null; }
+  render();
+  if (S.batch) { $("batchSel").value = S.batch.id; history.replaceState(null, "", "#batch=" + S.batch.id); }
+}
+
+function render() {
+  const b = S.batch, c = $("content");
+  if (!b) { c.innerHTML = onboarding(); return; }
+  const m = b.meta || {};
+  const engine = b.engine.includes("personal") ? "固定打分 + 你的个人口味模型" : b.engine.includes("semantic") ? "固定打分 + 语义匹配" : "固定打分";
+  const items = b.items.filter(it => S.filter === "all" ? true : S.filter === "none" ? !it.feedback : it.feedback === S.filter);
+  const n = (f) => b.items.filter(it => f === "none" ? !it.feedback : it.feedback === f).length;
+  c.innerHTML = `
+    <div class="head">
+      <div><h2>Vol. <span>${b.id}</span></h2><div class="sub">${fmtTime(b.created_at)} · ${engine} · 从 ${m.pool ?? "?"} 本候选里挑出 ${b.items.length} 本</div></div>
+      <span class="spacer"></span>
+      <div class="tabs">
+        ${[["all", "全部", b.items.length], ["none", "未翻阅", n("none")], ["want", "心动", n("want")]].map(([k, t, c]) =>
+          `<button class="${S.filter === k ? "on" : ""}" onclick="setFilter('${k}')">${t} ${c}</button>`).join("")}
+      </div>
+    </div>
+    ${m.ranker_message || m.semantic_error ? `<div class="note">${esc(m.ranker_message || "")}${m.semantic_error ? `<br><span class="warn">语义匹配这批没用上：${esc(m.semantic_error)}</span>` : ""}</div>` : ""}
+    ${items.length ? `<div class="grid">${items.map(card).join("")}</div>` : `<div class="empty-msg">这里还空着</div>`}`;
+}
+function setFilter(f) { S.filter = f; render(); }
+
+function card(it) {
+  const fb = it.feedback;
+  const read = fb === "seen" || fb === "seen_like";
+  const btn = (l) => `<button class="${l} ${fb === l || (l === "seen" && read) ? "on" : ""}" onclick="feedback(${it.pos}, '${l}')">${LABEL[l]}</button>`;
+  const seenQ = read ? `<div class="seenq"><span>读过，还喜欢吗？</span><button class="${fb === "seen_like" ? "on" : ""}" onclick="feedback(${it.pos}, '${fb === "seen_like" ? "seen" : "seen_like"}', true)">${fb === "seen_like" ? "♥ 喜欢" : "♡ 喜欢"}</button></div>` : "";
+  return `<div class="card ${fb ? "fb-" + fb : ""}" id="card-${it.pos}">
+    <a class="cover" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">
+      <div class="ph">${esc(it.core_title)}</div>
+      <img loading="lazy" src="${esc(it.cover)}" alt="" onerror="this.remove()">
+      <span class="pos">${it.pos}</span><span class="route">${esc(it.reason.route_name || it.route)}</span>
+    </a>
+    <div class="body">
+      <a class="title" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer" title="${esc(it.title)}">${esc(it.core_title)}</a>
+      <div class="meta" title="${esc((it.authors || []).join("、"))}">${esc(it.source)} · ${esc((it.authors || []).join("、") || "作者未知")}${it.parodies?.length ? " · " + esc(it.parodies[0]) : ""}</div>
+      <div class="reason">${esc(it.reason.text || "")}</div>
+      <div class="tags">${(it.tags || []).slice(0, 5).map(t => `<span class="tag">${esc(t)}</span>`).join("")}</div>
+      <button class="why" onclick="why(${it.pos})">为何是它 →</button>
+      <div class="acts">${btn("want")}${btn("skip")}${btn("dislike")}${btn("seen")}</div>${seenQ}
+    </div></div>`;
+}
+
+async function feedback(pos, label, exact = false) {
+  const it = S.batch.items.find(x => x.pos === pos);
+  // 再点一次 = 撤销；“读过·喜欢”时再点“读过”也是撤销。exact：直接设成这个（“还喜欢吗”那个小按钮用）
+  const same = it.feedback === label || (label === "seen" && it.feedback === "seen_like");
+  const next = exact ? label : same ? null : label;
+  try {
+    await api("/api/feedback", { method: "POST", body: JSON.stringify({ batch_id: S.batch.id, pos, label: next }) });
+    it.feedback = next;
+    const y = window.scrollY; render(); window.scrollTo(0, y);
+    loadStatus();
+    toast(next ? `记下了：${LABEL[next].replace("♥ ", "")}` : "已撤销");
+  } catch (e) { toast(e.message); }
+}
+
+let whyPos = null;
+async function why(pos) {
+  whyPos = pos;
+  $("whyTitle").textContent = `Vol.${S.batch.id} · No.${pos}　为何是它`;
+  $("whyLocal").textContent = "翻找中…";
+  $("whyDeep").hidden = true;
+  const a = S.status?.analyze || {};
+  $("whyDeepBtn").disabled = !a.engine;
+  $("whyDeepBtn").textContent = a.engine ? `请 ${a.engine_name} 细读` : "细读";
+  $("whyHint").textContent = a.engine ? "" : "想让 AI 细读：本机装好 Codex / Claude Code，或在设置里填 API。";
+  $("whyDeepBtn").onclick = () => deep(pos);
+  whyDlg.showModal();
+  try { const r = await api(`/api/explain/${S.batch.id}/${pos}`); $("whyLocal").textContent = r.local; }
+  catch (e) { $("whyLocal").textContent = e.message; }
+}
+async function deep(pos) {
+  const out = $("whyDeep"); out.hidden = false;
+  out.textContent = `${S.status.analyze.engine_name} 正在细读，通常半分钟到两分钟，可以先关掉这个窗口，读完会弹回来…`;
+  try { await runJob(`/api/analyze/item/${S.batch.id}/${pos}`, { q: $("whyQ").value }); }
+  catch (e) { out.textContent = e.message; }
+}
+
+/* ---------- 解读 ---------- */
+async function openAnalysis() {
+  if (!S.batch) return toast("先开一卷，再来解读");
+  const a = S.status?.analyze || {};
+  $("anaTitle").textContent = `Vol.${S.batch.id} · 卷首语`;
+  $("anaRun").disabled = !a.engine;
+  $("anaRun").textContent = a.engine ? `请 ${a.engine_name} 读这一卷` : "没有可用的解读者";
+  $("anaRun").onclick = runAnalysis;
+  const cached = await api(`/api/analysis/batch/${S.batch.id}`).catch(() => ({}));
+  $("anaText").textContent = cached.text || (a.engine
+    ? "还没有解读。点下面的按钮，它会读完这一卷的标题、作者、标签和推荐依据，写一段卷首语：你的口味、先翻哪几本、哪本可能是意外之喜。"
+    : "本机装好 Codex 或 Claude Code（已登录）即可直接使用；也可以在“设置 → 高级设置”里填一个 OpenAI 兼容的 API。");
+  $("anaFrom").textContent = cached.text ? `来自 ${({ api: "API", codex: "Codex", claude: "Claude Code" })[cached.engine] || cached.engine}` : "";
+  anaDlg.showModal();
+}
+async function runAnalysis() {
+  $("anaText").textContent = `${S.status.analyze.engine_name} 正在读这一卷，通常半分钟到两分钟。可以先关掉，读完会自动弹回来。`;
+  try { await runJob(`/api/analyze/batch/${S.batch.id}`); } catch (e) { $("anaText").textContent = e.message; }
+}
+function showAnalysis(r) {
+  if (r.pos) {
+    if (S.batch && S.batch.id === r.batch_id) {
+      if (!whyDlg.open || whyPos !== r.pos) why(r.pos);
+      setTimeout(() => { $("whyDeep").hidden = false; $("whyDeep").textContent = r.text + `\n\n—— ${r.engine_name}`; }, 300);
+    }
+    return;
+  }
+  $("anaTitle").textContent = `Vol.${r.batch_id} · 卷首语`;
+  $("anaText").textContent = r.text;
+  $("anaFrom").textContent = `来自 ${r.engine_name}`;
+  if (!anaDlg.open) anaDlg.showModal();
+}
+function showAnalysisError(j) {
+  const t = anaDlg.open ? $("anaText") : (whyDlg.open ? $("whyDeep") : null);
+  if (t) t.textContent = "没读成：" + j.error;
+}
+
+/* ---------- 起步引导 ---------- */
+function onboarding() {
+  const s = S.status; if (!s) return "";
+  const p = s.sites.pica, j = s.sites.jm;
+  const step = (n, done, title, body) => `<div class="step ${done ? "done" : ""}"><h3><span class="num">${done ? "✓" : n}</span>${title}</h3>${body}</div>`;
+  const loginForm = (site, ph) => `<div class="form"><input class="inp" id="${site}U" placeholder="${ph}" autocomplete="off"><input class="inp" id="${site}P" type="password" placeholder="密码"><button class="btn y" onclick="login('${site}', '${site}U', '${site}P')">登录${SITE[site]}</button></div>`;
+  const siteStep = (n, site, ph) => {
+    const st = s.sites[site];
+    if (!st.logged_in) return step(n, false, `登录${SITE[site]}`, `<p>账号只保存在本机，只用于向${SITE[site]}登录。</p>${loginForm(site, ph)}`);
+    if (!st.favorites) return step(n, false, `导入${SITE[site]}收藏`, `<p>已登录。读取收藏列表后会自动补全每本的标签。</p><button class="btn y" onclick="doImport('${site}')">导入收藏</button>`);
+    return step(n, true, `${SITE[site]}收藏 ${st.favorites} 本`, `<p>${st.last_import ? "上次导入 " + ago(st.last_import.at) : ""}</p><button class="btn sm" onclick="doImport('${site}')">重新导入</button>`);
+  };
+  const ready = p.favorites + j.favorites > 0;
+  return `<div class="hero"><h1>下一本<span>本命</span>，正在某处等你。</h1><p>读懂你在哔咔和禁漫的收藏，去禁漫替你寻那些还没遇见的作品。一切都在这台电脑上完成。</p></div>
+    <div class="onb">${siteStep(1, "pica", "哔咔用户名或邮箱")}${siteStep(2, "jm", "禁漫用户名")}
+    ${step(3, false, "翻开第一卷", `<p>${ready ? "收藏已就绪。只有一个站也可以先开卷，另一个站之后补上会合并计算。" : "先完成前两步中的至少一个。"}</p><button class="btn y" ${ready ? "" : "disabled"} onclick="generate()">开卷 ✦</button>`)}</div>`;
+}
+
+/* ---------- 账号与设置 ---------- */
+function openDrawer() { $("drawer").classList.add("on"); fillSettings(); }
+function closeDrawer() { $("drawer").classList.remove("on"); }
+function renderDrawer() {
+  const s = S.status; if (!s) return;
+  for (const site of ["pica", "jm"]) {
+    const st = s.sites[site];
+    const box = $(site === "pica" ? "secPica" : "secJm");
+    const head = `<h4>${SITE[site]}<span class="st">${st.logged_in ? `<span class="ok">已登录</span> · 收藏 ${st.favorites} 本${st.last_import ? " · " + ago(st.last_import.at) + "导入" : ""}` : "未登录"}</span></h4>`;
+    box.innerHTML = head + (st.logged_in
+      ? `<div class="row"><button class="btn sm y" onclick="doImport('${site}')">${st.favorites ? "重新导入" : "导入收藏"}</button><button class="btn sm ghost" onclick="logout('${site}')">退出登录</button></div>`
+      : `<div class="form"><input class="inp" id="${site}DU" placeholder="${site === "pica" ? "哔咔用户名或邮箱" : "禁漫用户名"}" autocomplete="off"><input class="inp" id="${site}DP" type="password" placeholder="密码"><button class="btn sm y" onclick="login('${site}', '${site}DU', '${site}DP')">登录</button></div>`);
+  }
+  const n = s.net || {};
+  $("netWhen").textContent = n.checked_at ? ago(n.checked_at) + "检测" : "";
+  $("netKv").innerHTML = n.checked_at ? `
+    <span>线路</span><span>${esc(n.route || "直连")}${n.proxy ? `（${esc(n.proxy)}）` : ""}</span>
+    <span>哔咔</span><span>${n.pica ? '<span class="ok">可连接</span>' : '<span class="bad">连不上</span>'}</span>
+    <span>禁漫</span><span>${n.jm ? '<span class="ok">可连接</span>' : '<span class="bad">连不上</span>'}</span>
+    <span>模型下载</span><span>${esc((n.hf_endpoint || "").replace("https://", ""))}</span>` : `<span>状态</span><span>还没检测</span>`;
+  $("semInstall").hidden = s.semantic_installed;
+  $("semHint").textContent = s.semantic_installed ? "用多语言 MiniLM 补充字面匹配，首次使用下载约 470MB 模型" : "需要先安装组件（约 700MB，全自动）";
+  const r = s.ranker || {};
+  const fbText = Object.entries(s.feedback_counts || {}).map(([k, v]) => `${k} ${v}`).join("，") || "还没有反馈";
+  const ev = s.eval || {};
+  $("evalMsg").textContent = ev.summary ? `上次（${fmtTime(ev.at)}）：${ev.summary}` : "用你自己的收藏比一比新旧算法，需要联网取一次站内样本，约一两分钟。";
+  $("rankerState").textContent = `排序：${r.message || "固定打分"}${r.weights_text ? "（个人权重：" + r.weights_text + "）" : ""} 你的表态：${fbText}。`;
+  const a = s.analyze || {}, av = a.available || {};
+  const opt = (v, t, ok) => `<option value="${v}" ${ok ? "" : "disabled"}>${t}${ok ? "" : "（未检测到）"}</option>`;
+  $("anaEngine").innerHTML = `<option value="auto">自动（${a.engine_name || "暂无可用"}）</option>` +
+    opt("codex", "Codex", av.codex) + opt("claude", "Claude Code", av.claude) + opt("api", "API", av.api);
+  $("anaEngine").value = a.preference || "auto";
+  const an = (S.settings && S.settings.analyze) || {};
+  if (document.activeElement !== $("anaModel")) $("anaModel").value = an[(a.engine || "codex") + "_model"] || "";
+  $("anaState").innerHTML = a.engine ? `<span class="ok">${esc(a.engine_name)} 可用</span>` : "暂无可用";
+  $("dataDir").textContent = "数据保存在：" + s.data_dir;
+}
+function netSummary(n) { return `${n.route || "直连"}${n.proxy ? "（" + n.proxy + "）" : ""} · 哔咔${n.pica ? "可连接" : "连不上"} · 禁漫${n.jm ? "可连接" : "连不上"}`; }
+
+async function fillSettings() {
+  const s = await api("/api/settings"); S.settings = s;
+  $("batchSize").value = s.batch_size; $("batchSizeV").textContent = s.batch_size;
+  $("semOn").checked = !!s.semantic?.enabled;
+  $("proxy").value = s.proxy || ""; $("jmDomain").value = s.jm?.web_domain || ""; $("picaTpl").value = s.pica?.web_url_template || "";
+  $("llmBase").value = s.llm?.base_url || ""; $("llmKey").value = s.llm?.api_key || ""; $("llmModel").value = s.llm?.model || "";
+  $("saveMsg").textContent = "";
+}
+$("batchSize").oninput = (e) => $("batchSizeV").textContent = e.target.value;
+$("batchSize").onchange = async (e) => { await api("/api/settings", { method: "POST", body: JSON.stringify({ batch_size: +e.target.value }) }); toast("已保存"); };
+$("semOn").onchange = async (e) => {
+  if (e.target.checked && !S.status.semantic_installed) { e.target.checked = false; return installSemantic(); }
+  await api("/api/settings", { method: "POST", body: JSON.stringify({ semantic: { enabled: e.target.checked } }) });
+  toast(e.target.checked ? "语义匹配已打开" : "语义匹配已关闭"); loadStatus();
+};
+async function installSemantic() { closeDrawer(); await runJob("/api/semantic/install"); }
+async function runEval() { closeDrawer(); await runJob("/api/eval"); }
+async function netCheck() { closeDrawer(); await runJob("/api/net/check"); }
+async function saveAdvanced() {
+  const body = {
+    proxy: $("proxy").value.trim(),
+    jm: { web_domain: $("jmDomain").value.trim() || "18comic.vip" },
+    pica: { web_url_template: $("picaTpl").value.trim() || S.settings.pica.web_url_template },
+    llm: { base_url: $("llmBase").value.trim(), api_key: $("llmKey").value.trim(), model: $("llmModel").value.trim() },
+  };
+  try { await api("/api/settings", { method: "POST", body: JSON.stringify(body) }); $("saveMsg").textContent = "已保存"; loadStatus(); }
+  catch (e) { $("saveMsg").textContent = e.message; }
+}
+
+async function login(site, uid, pid) {
+  const u = $(uid).value.trim(), p = $(pid).value;
+  if (!u || !p) return toast("请填写账号和密码");
+  try {
+    await api("/api/login/" + site, { method: "POST", body: JSON.stringify({ username: u, password: p }) });
+    toast(`${SITE[site]}登录成功`); await loadStatus(); if (!S.batch) render();
+  } catch (e) { toast(e.message); }
+}
+async function logout(site) { await api("/api/logout/" + site, { method: "POST" }); await loadStatus(); if (!S.batch) render(); }
+async function doImport(site) { closeDrawer(); try { await runJob("/api/import/" + site); } catch (e) { toast(e.message); } }
+async function generate() { try { await runJob("/api/batches"); } catch (e) { toast(e.message); } }
+
+$("genBtn").onclick = generate;
+$("anaBtn").onclick = openAnalysis;
+$("anaModel").onchange = async (e) => {
+  const eng = (S.status.analyze || {}).engine || "codex";
+  await api("/api/settings", { method: "POST", body: JSON.stringify({ analyze: { [eng + "_model"]: e.target.value.trim() } }) });
+  S.settings = await api("/api/settings"); toast("已保存");
+};
+$("anaEngine").onchange = async (e) => { await api("/api/settings", { method: "POST", body: JSON.stringify({ analyze: { engine: e.target.value } }) }); toast("已保存"); loadStatus(); };
+$("batchSel").onchange = (e) => e.target.value && loadBatch(e.target.value);
+$("setBtn").onclick = openDrawer;
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDrawer(); });
+
+(async () => {
+  await loadStatus();
+  const m = location.hash.match(/batch=(\d+)/);
+  await loadBatch(m ? m[1] : null);
+})();
+
+/* ---------- 调音 ---------- */
+const LV = [[4, "本命", "1"], [3, "喜欢", "2"], [2, "一般", "3"], [1, "其实不太喜欢", "4"]];
+let CAL = null;
+async function openCal() {
+  $("calDlg").showModal();
+  $("calBody").innerHTML = `<div class="wait"></div>`;
+  try { const r = await api("/api/calibrate/next"); CAL = { ...r, i: 0, answers: [] }; }
+  catch (e) { $("calBody").innerHTML = `<p>${esc(e.message)}</p>`; return; }
+  if (!CAL.items.length) { $("calBody").innerHTML = `<p>${esc(CAL.message || "暂时没有可以调的作品了。")}</p>`; return; }
+  calCard();
+}
+function closeCal() { $("calDlg").close(); CAL = null; loadStatus(); }
+function calCur() { return CAL.answers[CAL.i] || (CAL.answers[CAL.i] = { level: null, reasons: new Set() }); }
+function calCard() {
+  const it = CAL.items[CAL.i], n = CAL.items.length, a = calCur();
+  const art = a.reasons.has("艺术");
+  const pills = (names, cls = "") => names.map(x => `<button class="pill ${cls} ${a.reasons.has(x) ? "on" : ""}" onclick="calWhy('${x}')">${x}</button>`).join("");
+  const link = it.url ? `href="${esc(it.url)}" target="_blank" rel="noopener noreferrer"` : "";
+  $("calBody").innerHTML = `
+    <div class="steps">${CAL.items.map((_, k) => `<span class="${k < CAL.i || (k === CAL.i && a.level !== null) ? "on" : ""}"></span>`).join("")}</div>
+    <div class="cv"><a class="cvimg" ${link} title="在${esc(it.site_name)}打开"><img src="${it.cover}" alt="" onerror="this.style.visibility='hidden'"></a>
+      <div><div class="ti"><a ${link} title="${esc(it.full_title)}">${esc(it.title)}</a></div>
+        <div class="meta">${esc(it.source_name)} · ${esc(it.site_name)}${it.authors.length ? " · " + esc(it.authors.join("、")) : ""}${it.cluster ? ` · 口味簇「${esc(it.cluster)}」` : ""}</div>
+        <div class="tg">${it.tags.map(t => `<span>${esc(t)}</span>`).join("")}</div>
+        ${it.url ? `<a class="open" ${link}>去${esc(it.site_name)}翻一眼 ↗</a>` : ""}</div></div>
+    <div class="rs"><span class="lbl">喜欢它是因为（可不选）</span>${pills(["实用", "艺术"])}${art ? pills(["画风", "题材", "剧情"], "sub") : ""}</div>
+    <div class="lv4">${LV.map(([v, name, key]) => `<button class="l${v} ${a.level === v ? "on" : ""}" onclick="calRate(${v})">${name}<small>按 ${key}</small></button>`).join("")}</div>
+    <div class="nav"><button onclick="calBack()" ${CAL.i ? "" : "disabled"}>← 上一本</button>
+      <span class="hint" style="margin:0">第 ${CAL.round} 轮 · ${CAL.i + 1} / ${n}</span>
+      <button onclick="calRate(0)">跳过（S）→</button></div>`;
+}
+function calWhy(x) {
+  const a = calCur();
+  if (a.reasons.has(x)) a.reasons.delete(x); else a.reasons.add(x);
+  if (x === "艺术" && !a.reasons.has("艺术")) ["画风", "题材", "剧情"].forEach(y => a.reasons.delete(y));
+  if (["画风", "题材", "剧情"].includes(x) && a.reasons.has(x)) a.reasons.add("艺术");
+  calCard();
+}
+function calBack() { if (CAL && CAL.i > 0) { CAL.i--; calCard(); } }
+let calBusy = false;
+async function calRate(level) {
+  if (!CAL || calBusy) return;
+  const it = CAL.items[CAL.i], a = calCur();
+  a.level = level;
+  api("/api/calibrate", { method: "POST", body: JSON.stringify({ site: it.site, wid: it.wid, level, reasons: [...a.reasons], round: CAL.round, source: it.source }) }).catch(() => {});
+  calBusy = true; calCard();                       // 先亮一下选中的那档，再翻页
+  await new Promise(r => setTimeout(r, 220));
+  calBusy = false;
+  CAL.i++;
+  if (CAL.i < CAL.items.length) { calCard(); return; }
+  $("calBody").innerHTML = `<div class="wait">${esc(flavor("cal", FLAVOR_CAL))}</div>`;
+  await new Promise(r => setTimeout(r, 400));
+  let sm;
+  try { sm = await api("/api/calibrate/summary/" + CAL.round); } catch (e) { $("calBody").innerHTML = `<p>${esc(e.message)}</p>`; return; }
+  calSummary(sm);
+}
+function calSummary(sm) {
+  const opts = (cur) => [[4, "本命"], [3, "喜欢"], [2, "一般"], [1, "其实不太喜欢"], [0, "跳过"]].map(([v, n]) => `<option value="${v}" ${v === cur ? "selected" : ""}>${n}</option>`).join("");
+  $("calBody").innerHTML = `
+    <div class="sum">${esc(sm.text)}</div>
+    ${sm.items.map(it => `<div class="sumrow"><span>${esc(it.title)}<span class="hint" style="margin:0"> · ${esc(it.source_name)}</span></span>
+      <select onchange="calFix('${it.site}','${esc(it.wid)}',this.value,'${it.source}')">${opts(it.level)}</select></div>`).join("")}
+    <div class="row" style="margin-top:16px;justify-content:flex-end;gap:8px">
+      <button class="btn" onclick="CAL.i = CAL.items.length - 1; calCard()">← 回到上一本</button><span class="spacer"></span>
+      <button class="btn" onclick="closeCal()">回书架</button><button class="btn y" onclick="openCal()">再调一轮</button></div>`;
+}
+async function calFix(site, wid, level, source) {
+  await api("/api/calibrate", { method: "POST", body: JSON.stringify({ site, wid, level: Number(level), round: CAL.round, source }) });
+  toast("已改");
+}
+document.addEventListener("keydown", (e) => {
+  if (!CAL || !$("calDlg").open || CAL.i >= CAL.items.length) return;
+  const m = { "1": 4, "2": 3, "3": 2, "4": 1 }[e.key];
+  if (m) { e.preventDefault(); calRate(m); }
+  else if (e.key === "s" || e.key === "S") { e.preventDefault(); calRate(0); }
+  else if (e.key === "ArrowLeft" || e.key === "Backspace") { e.preventDefault(); calBack(); }
+});
+</script>
+</body>
+</html>

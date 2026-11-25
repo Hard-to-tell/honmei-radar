@@ -1,0 +1,373 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>本命报告</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%23FFD21F'/%3E%3Ctext x='32' y='45' font-size='38' text-anchor='middle' font-family='sans-serif' font-weight='900' fill='%23111'%3E本%3C/text%3E%3C/svg%3E">
+<style>
+:root { --bg: #0a0a0a; --panel: #161616; --line: #2a2a2a; --ink: #f4f1e8; --muted: #9a958a; --faint: #5e5a52;
+  --y: #ffd21f; --y2: #ffe680; --y-ink: #111; --hot: #ff5a5f; --cool: #7aa7ff; }
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--bg); color: var(--ink); height: 100%; }
+body { font: 15px/1.6 "Segoe UI", system-ui, -apple-system, "Microsoft YaHei UI", "Microsoft YaHei", "PingFang SC", sans-serif; }
+.deck { height: 100vh; overflow-y: auto; scroll-snap-type: y proximity; scroll-behavior: smooth; }
+section { min-height: 100vh; scroll-snap-align: start; display: flex; flex-direction: column; justify-content: center;
+  padding: 72px max(20px, calc((100vw - 980px) / 2)) 56px; position: relative; overflow: hidden; }
+.top { position: fixed; z-index: 10; top: 0; left: 0; right: 0; display: flex; align-items: center; gap: 12px; padding: 12px 18px;
+  background: linear-gradient(var(--bg), rgba(10,10,10,0)); }
+.top a { color: var(--muted); text-decoration: none; font-size: 13px; border: 1px solid var(--line); border-radius: 999px; padding: 3px 12px; background: rgba(0,0,0,.4); }
+.top a:hover { color: var(--y); border-color: var(--y); }
+.logo { width: 28px; height: 28px; border-radius: 8px; background: var(--y); color: var(--y-ink); display: grid; place-items: center; font-weight: 900; }
+.dots { position: fixed; z-index: 10; right: 14px; top: 50%; transform: translateY(-50%); display: flex; flex-direction: column; gap: 8px; }
+.dots a { width: 8px; height: 8px; border-radius: 50%; background: #333; display: block; }
+.dots a.on { background: var(--y); height: 22px; border-radius: 4px; }
+.kicker { color: var(--y); font-weight: 700; letter-spacing: .18em; font-size: 12px; text-transform: uppercase; margin-bottom: 10px; }
+h1 { font-size: clamp(40px, 8vw, 92px); line-height: 1.02; margin: 0 0 18px; letter-spacing: -.01em; }
+h2 { font-size: clamp(28px, 4.6vw, 52px); line-height: 1.1; margin: 0 0 22px; }
+h1 em, h2 em { font-style: normal; color: var(--y); }
+.lead { color: var(--muted); font-size: clamp(15px, 1.8vw, 19px); max-width: 640px; }
+.big { font-size: clamp(64px, 14vw, 168px); font-weight: 900; color: var(--y); line-height: .9; letter-spacing: -.03em; }
+.hint { position: absolute; bottom: 22px; left: 50%; transform: translateX(-50%); color: var(--faint); font-size: 12px; animation: bob 2s ease-in-out infinite; }
+@keyframes bob { 50% { transform: translate(-50%, 6px); } }
+.reveal { opacity: 0; transform: translateY(18px); transition: opacity .7s ease, transform .7s ease; }
+.in .reveal { opacity: 1; transform: none; }
+.in .reveal:nth-child(2) { transition-delay: .08s; } .in .reveal:nth-child(3) { transition-delay: .16s; }
+.in .reveal:nth-child(4) { transition-delay: .24s; } .in .reveal:nth-child(5) { transition-delay: .32s; }
+
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; margin-top: 8px; }
+.stat { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 18px; }
+.stat b { display: block; font-size: 40px; color: var(--y); line-height: 1.1; font-variant-numeric: tabular-nums; }
+.stat span { color: var(--muted); font-size: 13px; }
+
+.cloud { display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: baseline; max-width: 900px; }
+.cloud span { line-height: 1.1; font-weight: 800; }
+.bars { display: grid; gap: 8px; max-width: 760px; }
+.bar { display: grid; grid-template-columns: 110px 1fr 52px; align-items: center; gap: 10px; font-size: 14px; }
+.bar .t { color: var(--ink); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.bar .track { height: 12px; background: #1f1f1f; border-radius: 99px; overflow: hidden; }
+.bar .fill { height: 100%; background: var(--y); border-radius: 99px; width: 0; transition: width 1s cubic-bezier(.2,.8,.2,1); }
+.bar .v { color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+
+.dims { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+.dim { background: var(--panel); border: 1px solid var(--line); border-radius: 16px; padding: 16px; }
+.dim h3 { margin: 0 0 10px; font-size: 15px; color: var(--y); }
+.dim .bar { grid-template-columns: 84px 1fr 40px; font-size: 13px; }
+.dim .bar .track { height: 8px; }
+
+.radar-wrap { display: grid; grid-template-columns: minmax(260px, 420px) 1fr; gap: 28px; align-items: center; }
+.pairs { display: grid; gap: 14px; }
+.pair { display: grid; grid-template-columns: 92px 1fr 92px; white-space: nowrap; align-items: center; gap: 10px; font-size: 14px; }
+.pair .l { text-align: right; color: var(--muted); } .pair .r { color: var(--muted); }
+.pair .track { height: 10px; background: #1f1f1f; border-radius: 99px; position: relative; }
+.pair .knob { position: absolute; top: 50%; width: 18px; height: 18px; border-radius: 50%; background: var(--y); transform: translate(-50%, -50%); box-shadow: 0 0 0 4px rgba(255,210,31,.18); transition: left 1s cubic-bezier(.2,.8,.2,1); left: 50%; }
+
+.rank { display: grid; gap: 10px; max-width: 720px; }
+.rank .row { display: grid; grid-template-columns: 44px 1fr auto; align-items: center; gap: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px 16px; }
+.rank .n { font-size: 24px; font-weight: 900; color: var(--faint); }
+.rank .row:first-child { border-color: var(--y); }
+.rank .row:first-child .n { color: var(--y); }
+.rank .name { font-size: 18px; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.rank .c { color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.clusters { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+.cl { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; }
+.cl .strip { display: grid; grid-template-columns: repeat(4, 1fr); height: 150px; background: #111; }
+.cl .strip a { display: block; overflow: hidden; position: relative; }
+.cl .strip a span { position: absolute; inset: 0; padding: 10px 8px; font-size: 11px; line-height: 1.4; color: var(--muted); overflow: hidden; border-right: 1px solid var(--line); }
+.cl .strip img { position: relative; width: 100%; height: 100%; object-fit: cover; opacity: 0; filter: saturate(.9) brightness(.85); transition: transform .35s, filter .35s, opacity .3s; }
+.cl .strip a:hover img { transform: scale(1.06); filter: none; }
+.cl .shade { position: absolute; left: 0; right: 0; top: 70px; height: 80px; background: linear-gradient(transparent, var(--panel)); pointer-events: none; }
+.cl .in { padding: 0 16px 16px; margin-top: -26px; position: relative; }
+.cl .nm { font-size: 22px; font-weight: 900; line-height: 1.2; }
+.cl .nm small { font-size: 13px; color: var(--y); font-weight: 700; margin-left: 8px; }
+.cl .bar1 { height: 5px; background: #262626; border-radius: 9px; margin: 8px 0 10px; overflow: hidden; }
+.cl .bar1 i { display: block; height: 100%; background: var(--y); border-radius: 9px; width: 0; transition: width 1s; }
+.cl .sig { font-size: 13px; color: #d8d3c7; margin-bottom: 4px; }
+.cl .sig b { color: var(--y); font-weight: 700; }
+.cl .au { color: var(--faint); font-size: 12px; }
+.covers { display: grid; grid-template-columns: repeat(auto-fill, minmax(120px, 1fr)); gap: 14px; max-width: 920px; }
+.cov { text-decoration: none; color: var(--ink); }
+.cov .im { aspect-ratio: 3/4; border-radius: 12px; overflow: hidden; background: #1a1a1a; border: 1px solid var(--line); position: relative; }
+.cov .im img { width: 100%; height: 100%; object-fit: cover; transition: transform .3s; }
+.cov:hover .im img { transform: scale(1.05); }
+.cov .im span { position: absolute; inset: 0; display: grid; place-items: center; padding: 8px; font-size: 12px; color: var(--muted); text-align: center; }
+.cov .t { font-size: 12.5px; margin-top: 6px; line-height: 1.35; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cov .rt { font-size: 11.5px; color: var(--y); margin-top: 2px; }
+.lonely { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 18px; max-width: 860px; }
+.lonely span { border: 1px dashed #3a3a3a; color: #bdb7aa; border-radius: 999px; padding: 1px 10px; font-size: 12.5px; }
+.tools { margin-top: 16px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+.tools .btn { padding: 7px 14px; font-size: 13.5px; }
+details.paste { margin-top: 12px; max-width: 760px; }
+details.paste summary { cursor: pointer; color: var(--muted); font-size: 13px; }
+details.paste textarea { width: 100%; min-height: 140px; margin-top: 8px; background: #111; color: var(--ink); border: 1px solid var(--line); border-radius: 10px; padding: 10px; font: 13px/1.5 ui-monospace, Consolas, monospace; }
+.slope { width: 100%; max-width: 760px; }
+.legend { color: var(--muted); font-size: 13px; margin-top: 6px; }
+
+.ai { max-width: 860px; }
+.ai .title { font-size: clamp(36px, 6vw, 68px); font-weight: 900; color: var(--y); line-height: 1.05; margin: 4px 0 12px; }
+.ai .one { font-size: clamp(18px, 2.4vw, 24px); margin-bottom: 14px; }
+.kw { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 26px; }
+.kw span { border: 1px solid var(--y); color: var(--y); border-radius: 999px; padding: 1px 12px; font-size: 13px; }
+.cards { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+.card { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 14px 16px; }
+.card h4 { margin: 0 0 6px; color: var(--y); font-size: 15px; }
+.card p { margin: 0; color: #d8d3c7; font-size: 14px; }
+.guess { display: grid; grid-template-columns: auto 1fr; gap: 10px; align-items: start; background: var(--panel); border: 1px dashed #3a3a3a; border-radius: 12px; padding: 10px 14px; }
+.lv { font-size: 11px; border-radius: 6px; padding: 1px 7px; white-space: nowrap; margin-top: 3px; }
+.lv.a { background: #2b3b2b; color: #9fe0a6; } .lv.b { background: #3b331a; color: var(--y); } .lv.c { background: #3b1f22; color: #ff9da0; }
+.btn { border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 12px; padding: 10px 18px; cursor: pointer; font: inherit; }
+.btn.y { background: var(--y); color: var(--y-ink); border-color: var(--y); font-weight: 800; }
+.btn:disabled { opacity: .5; cursor: default; }
+.row2 { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; margin-top: 18px; }
+.muted { color: var(--muted); font-size: 13px; }
+.share { margin-top: 10px; background: var(--y); color: var(--y-ink); border-radius: 22px; padding: 28px; max-width: 560px; }
+.share .s1 { font-size: 13px; font-weight: 700; letter-spacing: .12em; }
+.share .s2 { font-size: 30px; font-weight: 900; line-height: 1.15; margin: 10px 0; }
+.share .s3 { font-size: 15px; }
+.share .s4 { display: flex; gap: 18px; margin-top: 16px; font-size: 13px; font-weight: 700; }
+.glow { position: absolute; width: 60vmax; height: 60vmax; border-radius: 50%; background: radial-gradient(circle, rgba(255,210,31,.16), transparent 60%); right: -20vmax; top: -20vmax; pointer-events: none; }
+@media (max-width: 700px) {
+  .radar-wrap { grid-template-columns: 1fr; }
+  .bar { grid-template-columns: 86px 1fr 44px; }
+  .dots { display: none; }
+  .stats { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .cards { grid-template-columns: 1fr; }
+  .pair { grid-template-columns: 76px 1fr 76px; font-size: 13px; }
+}
+</style>
+</head>
+<body>
+<div class="top"><div class="logo">本</div><a href="/">← 回书架</a></div>
+<div class="dots" id="dots"></div>
+<div class="deck" id="deck"><section><p class="lead">读取中…</p></section></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const pct = (x) => Math.round(x * 100) + "%";
+let D = null, P = null, S = null;
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, { headers: { "Content-Type": "application/json" }, ...opts });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.detail || ("请求失败 " + r.status));
+  return data;
+}
+
+function bars(list, max, key = "share", label = "tag", fmt = (v) => pct(v)) {
+  const m = max || Math.max(...list.map(x => x[key]), 0.0001);
+  return `<div class="bars">${list.map(x => `<div class="bar reveal"><span class="t" title="${esc(x[label])}">${esc(x[label])}</span>
+    <div class="track"><div class="fill" data-w="${(100 * x[key] / m).toFixed(1)}"></div></div><span class="v">${fmt(x[key])}</span></div>`).join("")}</div>`;
+}
+
+function radar(axes) {
+  const keys = Object.keys(axes), n = keys.length, R = 150, cx = 200, cy = 190;
+  const max = Math.max(0.4, ...Object.values(axes));
+  const pt = (i, r) => [cx + r * Math.sin(2 * Math.PI * i / n), cy - r * Math.cos(2 * Math.PI * i / n)];
+  let g = "";
+  for (const f of [0.25, 0.5, 0.75, 1]) g += `<polygon points="${keys.map((_, i) => pt(i, R * f).join(",")).join(" ")}" fill="none" stroke="#2a2a2a"/>`;
+  keys.forEach((k, i) => { const [x, y] = pt(i, R); g += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#2a2a2a"/>`;
+    const [lx, ly] = pt(i, R + 22); g += `<text x="${lx}" y="${ly}" fill="#bdb7aa" font-size="13" text-anchor="middle" dominant-baseline="middle">${esc(k)}</text>`; });
+  const poly = keys.map((k, i) => pt(i, R * axes[k] / max).join(",")).join(" ");
+  g += `<polygon points="${poly}" fill="rgba(255,210,31,.25)" stroke="#ffd21f" stroke-width="2"/>`;
+  keys.forEach((k, i) => { const [x, y] = pt(i, R * axes[k] / max); g += `<circle cx="${x}" cy="${y}" r="3.5" fill="#ffd21f"/>`; });
+  return `<svg viewBox="0 0 400 380" width="100%" role="img" aria-label="倾向雷达">${g}</svg>`;
+}
+
+function pairs(a) {
+  const P = [["纯爱", "禁忌"], ["被支配", "支配"], ["丰满", "娇小"], ["剧情", "重口"]];
+  return `<div class="pairs">${P.map(([l, r]) => {
+    const t = (a[l] || 0) + (a[r] || 0) || 1, pos = 100 * (a[r] || 0) / t;
+    return `<div class="pair reveal"><span class="l">${l} ${pct(a[l] || 0)}</span><div class="track"><div class="knob" data-left="${pos.toFixed(1)}"></div></div><span class="r">${pct(a[r] || 0)} ${r}</span></div>`;
+  }).join("")}</div>`;
+}
+
+function slope(rising, falling) {
+  const items = [...rising.slice(0, 4).map(d => ({ ...d, up: true })), ...falling.slice(0, 4).map(d => ({ ...d, up: false }))];
+  if (!items.length) return `<p class="muted">早期和近期的收藏口味差不多，没有明显变化。</p>`;
+  const W = 760, H = 360, x1 = 150, x2 = W - 150, top = 30, bot = H - 30;
+  const max = Math.max(...items.flatMap(d => [d.early, d.recent]), 0.1);
+  const y = (v) => bot - (bot - top) * v / max;
+  const spread = (key) => {   // 标签至少隔 17px，避免叠在一起
+    const ord = items.map((d, i) => [y(d[key]), i]).sort((a, b) => a[0] - b[0]), out = [];
+    let last = -1e9;
+    for (const [v, i] of ord) { last = Math.max(v, last + 17); out[i] = last; }
+    const over = last - (bot + 10); if (over > 0) out.forEach((v, i) => out[i] = v - over);
+    return out;
+  };
+  const lyE = spread("early"), lyR = spread("recent");
+  let g = `<text x="${x1}" y="16" fill="#9a958a" font-size="13" text-anchor="middle">早期收藏</text><text x="${x2}" y="16" fill="#9a958a" font-size="13" text-anchor="middle">近期收藏</text>
+    <line x1="${x1}" y1="${top}" x2="${x1}" y2="${bot}" stroke="#2a2a2a"/><line x1="${x2}" y1="${top}" x2="${x2}" y2="${bot}" stroke="#2a2a2a"/>`;
+  items.forEach((d, i) => {
+    const c = d.up ? "#ffd21f" : "#7aa7ff";
+    g += `<line x1="${x1}" y1="${y(d.early)}" x2="${x2}" y2="${y(d.recent)}" stroke="${c}" stroke-width="2.5" opacity=".9"/>
+      <circle cx="${x1}" cy="${y(d.early)}" r="4" fill="${c}"/><circle cx="${x2}" cy="${y(d.recent)}" r="4" fill="${c}"/>
+      <text x="${x1 - 10}" y="${lyE[i]}" fill="${c}" font-size="13" text-anchor="end" dominant-baseline="middle">${esc(d.tag)} ${pct(d.early)}</text>
+      <text x="${x2 + 10}" y="${lyR[i]}" fill="${c}" font-size="13" dominant-baseline="middle">${pct(d.recent)} ${esc(d.tag)}</text>`;
+  });
+  return `<svg class="slope" viewBox="0 0 ${W} ${H}" role="img" aria-label="口味变化">${g}</svg>
+    <div class="legend"><span style="color:var(--y)">━</span> 越来越爱　<span style="color:var(--cool)">━</span> 渐渐淡了　（按收藏先后，比较最早 25% 和最新 25%）</div>`;
+}
+
+function ring(share) {
+  const r = 28, c = 2 * Math.PI * r;
+  return `<svg viewBox="0 0 70 70" width="70" height="70"><circle cx="35" cy="35" r="${r}" fill="none" stroke="#262626" stroke-width="8"/>
+    <circle cx="35" cy="35" r="${r}" fill="none" stroke="#ffd21f" stroke-width="8" stroke-linecap="round" stroke-dasharray="${c * share} ${c}" transform="rotate(-90 35 35)"/>
+    <text x="35" y="39" text-anchor="middle" fill="#f4f1e8" font-size="14" font-weight="800">${pct(share)}</text></svg>`;
+}
+
+const CL_NAMES = ["主旋律", "第二人格", "隐藏面", "小众心头好", "偶尔想起", "冷门角落", "边角料"];
+const cover = (b, extra = "") => `<a class="cov reveal" href="${esc(b.url)}" target="_blank" rel="noopener noreferrer" title="${esc(b.title)}">
+  <div class="im"><span>${esc(b.title)}</span><img loading="lazy" src="${esc(b.cover)}" alt="" onerror="this.remove()"></div>
+  <div class="t">${esc(b.title)}</div>${extra}</a>`;
+function clusterCard(c, i) {
+  const strip = (c.works || []).slice(0, 4).map(b => `<a href="${esc(b.url)}" target="_blank" rel="noopener noreferrer" title="${esc(b.title)}"><span>${esc(b.title)}</span><img loading="lazy" src="${esc(b.cover)}" alt="" onload="this.style.opacity=1" onerror="this.remove()"></a>`).join("");
+  return `<div class="cl reveal"><div class="strip">${strip}</div><div class="shade"></div><div class="in">
+    <div class="nm">${esc(c.name)}<small>${CL_NAMES[i] || ""} · ${pct(c.share)}</small></div>
+    <div class="bar1"><i data-w="${(c.share * 100).toFixed(1)}"></i></div>
+    ${c.signature && c.signature.length ? `<div class="sig">这一簇格外多见：<b>${c.signature.map(esc).join("、")}</b></div>` : ""}
+    <div class="au">${esc((c.authors || []).join(" · "))}</div></div></div>`;
+}
+
+function aiTools() {
+  return `<div class="tools"><button class="btn" id="cpBtn">复制提示词</button>
+    <span class="muted">想用别的 AI（网页、桌面端）写？复制提示词发给它；仓库里的 PORTRAIT.md 是给 AI 桌面端的说明。</span></div>
+    <details class="paste"><summary>把别处写好的结果贴回来</summary>
+      <textarea id="pasteBox" placeholder="把 AI 回复的那段 JSON 整个贴进来"></textarea>
+      <div class="row2" style="margin-top:8px"><button class="btn" id="pasteBtn">存进报告</button></div></details>`;
+}
+function aiSections() {
+  const a = S?.analyze || {};
+  const btn = `<button class="btn y" id="pBtn" ${a.engine ? "" : "disabled"}>${P?.data || P?.raw ? "再画一次" : "生成我的画像"}</button>
+    <span class="muted">${a.engine ? `由 ${esc(a.engine_name)} 生成。会发送口味统计和一部分作品标题（你亲手点的本命一定在内），不含账号` : "本机装好 Codex / Claude Code，或在书架设置里填 API 后可用；也可以复制提示词去别处写"}</span>`;
+  if (!P || (!P.data && !P.raw)) {
+    return [`<div class="ai"><div class="kicker">AI 侧写</div><h2>它会怎么<em>读</em>你？</h2>
+      <p class="lead">把你的口味摘要和几本代表作交给侧写师，看它能读出什么，再看它敢猜到哪一步。最后留一句不评判的话。</p><div class="row2">${btn}</div><p class="muted" id="pMsg"></p>${aiTools()}</div>`];
+  }
+  const d = P.data;
+  if (!d) return [`<div class="ai"><div class="kicker">AI 侧写</div><pre style="white-space:pre-wrap">${esc(P.raw)}</pre><div class="row2">${btn}</div><p class="muted" id="pMsg"></p>${aiTools()}</div>`];
+  const lv = (l) => /瞎猜/.test(l) ? "c" : /大胆/.test(l) ? "b" : "a";
+  return [`<div class="ai">
+    <div class="kicker">AI 侧写</div>
+    <div class="title reveal">${esc(d.title)}</div>
+    <div class="kw reveal">${(d.keywords || []).map(k => `<span>${esc(k)}</span>`).join("")}</div>
+    <div class="cards">${(d.serious || []).map(s => `<div class="card reveal"><h4>${esc(s.heading)}</h4><p>${esc(s.body)}</p></div>`).join("")}</div>
+    ${d.drift ? `<div class="card reveal" style="margin-top:12px"><h4>口味的迁徙</h4><p>${esc(d.drift)}</p></div>` : ""}
+  </div>`, `<div class="ai">
+    <div class="kicker">AI 侧写</div><h2>它还<em>猜</em>了几件事</h2>
+    <p class="lead" style="margin-bottom:18px">信不信由你。</p>
+    <div class="cards">${(d.bold || []).map(b => `<div class="guess reveal"><span class="lv ${lv(b.level || "")}">${esc(b.level || "推测")}</span><span>${esc(b.guess)}</span></div>`).join("")}</div>
+    ${d.next ? `<p class="muted" style="margin-top:18px">给下一卷的建议：${esc(d.next)}</p>` : ""}
+    <div class="row2">${btn}</div><p class="muted" id="pMsg">${new Date(P.at * 1000).toLocaleString()} · ${esc(P.engine_name)}</p>
+    ${aiTools()}
+  </div>`];
+}
+
+function render() {
+  if (D.empty) { $("deck").innerHTML = `<section><h2>还没有收藏</h2><p class="lead">先回书架导入哔咔或禁漫的收藏，再来看报告。</p></section>`; return; }
+  const ps = D.per_site || {};
+  const topTags = D.top_tags.slice(0, 24);
+  const maxShare = topTags[0]?.share || 1;
+  const cloud = topTags.map((t, i) => `<span class="reveal" style="font-size:${(15 + 46 * Math.sqrt(t.share / maxShare)).toFixed(0)}px;color:${i < 3 ? "var(--y)" : i < 8 ? "#f4f1e8" : "#8f8a80"}">${esc(t.tag)}</span>`).join("");
+  const topAuthor = D.authors[0];
+  const d = P?.data;
+  const sections = [
+    `<div class="glow"></div><div class="kicker">HONMEI · 本命报告</div><h1 class="reveal">你的<em>本命</em><br>报告</h1>
+     <p class="lead reveal">${D.total} 本收藏，${D.distinct_authors} 位作者，一份只属于你的口味档案。<br>全部在这台电脑上算出来。</p><div class="hint">↓ 往下滑</div>`,
+    `<div class="kicker">一路收藏</div><h2>你一共把 <em>${D.total}</em> 本<br>放进了收藏夹</h2>
+     <div class="stats">
+      <div class="stat reveal"><b>${ps.pica || 0}</b><span>本来自哔咔</span></div>
+      <div class="stat reveal"><b>${ps.jm || 0}</b><span>本来自禁漫</span></div>
+      <div class="stat reveal"><b>${D.distinct_authors}</b><span>位作者</span></div>
+      <div class="stat reveal"><b>${D.repeat_authors}</b><span>位作者你收了不止一本</span></div>
+      <div class="stat reveal"><b>${pct(D.long_share)}</b><span>是长篇</span></div>
+      <div class="stat reveal"><b>${D.both_sites}</b><span>本在两边都收藏了</span></div></div>`,
+    `<div class="kicker">口味关键词</div><h2>翻来覆去，<br>你总在找 <em>${esc(topTags[0]?.tag)}</em></h2><div class="cloud">${cloud}</div>
+     <p class="muted" style="margin-top:18px">字越大，出现在你收藏里的比例越高。${esc(topTags[0]?.tag)} 出现在 ${pct(topTags[0]?.share || 0)} 的收藏里。</p>`,
+    `<div class="kicker">六个维度</div><h2>拆开来看</h2><div class="dims">${D.dimensions.map(dm => `<div class="dim reveal"><h3>${esc(dm.name)}</h3>${bars(dm.top.slice(0, 6), D.dimensions.reduce((m, x) => Math.max(m, x.top[0]?.share || 0), 0))}</div>`).join("")}</div>`,
+    `<div class="kicker">倾向指数</div><h2>你在光谱的<em>哪一端</em></h2><div class="radar-wrap"><div class="reveal">${radar(D.axes)}</div>${pairs(D.axes)}</div>
+     <p class="muted" style="margin-top:14px">每一项是命中相关标签的收藏比例；同一本可以同时命中多项。</p>`,
+    topAuthor ? `<div class="kicker">本命作者</div><h2><em>${esc(topAuthor.name)}</em><br>是你翻得最多的名字</h2>
+     <div class="rank">${D.authors.slice(0, 6).map((a, i) => `<div class="row reveal"><span class="n">${i + 1}</span><span class="name">${esc(a.name)}</span><span class="c">${a.count} 本</span></div>`).join("")}</div>` : "",
+    D.honmei && D.honmei.length ? `<div class="kicker">你亲手点的本命</div><h2>这几本，<br>你说是<em>本命</em></h2>
+     <div class="covers">${D.honmei.map(b => cover(b)).join("")}</div>` : "",
+    D.parodies.length ? `<div class="kicker">你常去的世界</div><h2>同人里，你最常回到<br><em>${esc(D.parodies[0].name)}</em></h2>${bars(D.parodies.slice(0, 6), 0, "count", "name", v => v + " 本")}` : "",
+    D.clusters.length ? `<div class="kicker">口味簇</div><h2>你的口味不止一种，<br>而是 <em>${D.clusters.length}</em> 种</h2>
+     <div class="clusters">${D.clusters.map(clusterCard).join("")}</div>
+     <p class="muted" style="margin-top:14px">封面是每一簇里最有代表性的几本，点开能直达原作。</p>` : "",
+    D.outliers && D.outliers.length ? `<div class="kicker">孤例</div><h2>还有几本，<br>和谁都<em>不像</em></h2>
+     <p class="lead" style="margin-bottom:20px">它们离每一个口味簇都很远，带着你收藏里几乎见不到的标签。也许是一时兴起，也许是一扇还没推开的门。</p>
+     <div class="covers">${D.outliers.map(b => cover(b, b.rare_tags && b.rare_tags.length ? `<div class="rt">${b.rare_tags.slice(0, 2).map(esc).join(" · ")}</div>` : "")).join("")}</div>
+     <div class="lonely">${(D.lonely_tags?.examples || []).map(t => `<span>${esc(t)}</span>`).join("")}</div>
+     <p class="muted" style="margin-top:10px">${D.lonely_tags?.count || 0} 个标签只出现过一次；${D.one_book_authors || 0} 位作者，你只收过他们一本。</p>` : "",
+    `<div class="kicker">口味的迁徙</div><h2>从早期到近期，<br>你<em>变了</em></h2>${slope(D.rising, D.falling)}`,
+    ...aiSections(),
+    `<div class="kicker">一句话</div><div class="share reveal"><div class="s1">HONMEI · 本命报告</div>
+      <div class="s2">${esc(d?.title || (topTags[0] ? topTags[0].tag + "信徒" : "收藏家"))}</div>
+      <div class="s3">${esc(d?.one_liner || `${D.total} 本收藏里，${pct(topTags[0]?.share || 0)} 都带着「${topTags[0]?.tag || ""}」。`)}</div>
+      <div class="s4"><span>${D.total} 本</span><span>${D.distinct_authors} 位作者</span>${topAuthor ? `<span>本命 ${esc(topAuthor.name)}</span>` : ""}</div></div>
+      <p class="muted" style="margin-top:16px">截个图，或者回书架开下一卷。</p>`,
+  ].filter(Boolean);
+  $("deck").innerHTML = sections.map((h, i) => `<section id="s${i}">${h}</section>`).join("");
+  $("dots").innerHTML = sections.map((_, i) => `<a href="#s${i}" data-i="${i}"></a>`).join("");
+  const pb = $("pBtn"); if (pb) pb.onclick = runPortrait;
+  const cb = $("cpBtn"); if (cb) cb.onclick = copyPrompt;
+  const sb = $("pasteBtn"); if (sb) sb.onclick = pastePortrait;
+  observe();
+}
+
+function observe() {
+  const io = new IntersectionObserver((es) => {
+    for (const e of es) if (e.isIntersecting) {
+      e.target.classList.add("in");
+      e.target.querySelectorAll(".fill, .bar1 i").forEach(f => f.style.width = f.dataset.w + "%");
+      e.target.querySelectorAll(".knob").forEach(k => k.style.left = k.dataset.left + "%");
+      const i = e.target.id.slice(1);
+      document.querySelectorAll(".dots a").forEach(a => a.classList.toggle("on", a.dataset.i === i));
+    }
+  }, { threshold: 0.35 });
+  document.querySelectorAll("section").forEach(s => io.observe(s));
+}
+
+async function copyPrompt() {
+  const b = $("cpBtn");
+  try {
+    const { prompt, chars } = await api("/api/portrait/prompt");
+    try { await navigator.clipboard.writeText(prompt); }
+    catch (e) { const t = document.createElement("textarea"); t.value = prompt; document.body.appendChild(t); t.select(); document.execCommand("copy"); t.remove(); }
+    b.textContent = `已复制（${chars} 字）`; setTimeout(() => b.textContent = "复制提示词", 2500);
+  } catch (e) { b.textContent = "复制失败：" + e.message; }
+}
+async function pastePortrait() {
+  const text = $("pasteBox").value.trim();
+  if (!text) return;
+  try {
+    await api("/api/portrait/import", { method: "POST", body: JSON.stringify({ text }) });
+    P = await api("/api/portrait"); const y = $("deck").scrollTop; render(); $("deck").scrollTop = y;
+  } catch (e) { $("pMsg").textContent = e.message; }
+}
+async function runPortrait() {
+  const btn = $("pBtn"), msg = $("pMsg");
+  btn.disabled = true; msg.textContent = `${S.analyze.engine_name} 正在读你的口味摘要，通常半分钟到两分钟…`;
+  try {
+    const { job } = await api("/api/portrait", { method: "POST", body: "{}" });
+    while (true) {
+      await new Promise(r => setTimeout(r, 1500));
+      const j = await api("/api/jobs/" + job);
+      if (j.status === "running") continue;
+      if (j.status === "error") { msg.textContent = "没画成：" + j.error; btn.disabled = false; return; }
+      break;
+    }
+    P = await api("/api/portrait");
+    const y = $("deck").scrollTop; render(); $("deck").scrollTop = y;
+  } catch (e) { msg.textContent = e.message; btn.disabled = false; }
+}
+
+(async () => {
+  [D, P, S] = await Promise.all([api("/api/insights"), api("/api/portrait"), api("/api/status")]);
+  render();
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "honmei"
+version = "0.3.0"
+description = "本命 HONMEI：本地优先的哔咔 + 禁漫个人推荐书架"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = [
+    "fastapi>=0.110",
+    "uvicorn>=0.27",
+    "requests>=2.31",
+    "numpy>=1.24",
+    "scikit-learn>=1.3",
+    "opencc-python-reimplemented>=0.1.7",
+    "jmcomic>=2.6",
+    "mcp>=1.2",
+]
+
+[project.optional-dependencies]
+semantic = ["sentence-transformers>=2.6"]
+dev = ["pytest", "httpx"]
+
+[project.scripts]
+honmei = "manga_shelf.__main__:main"
+
+[tool.setuptools]
+packages = ["manga_shelf", "manga_shelf.sources"]
+
+[tool.setuptools.package-data]
+manga_shelf = ["static/*"]
