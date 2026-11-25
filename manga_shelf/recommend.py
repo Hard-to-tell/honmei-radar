@@ -298,7 +298,7 @@ def reason_text(reason: dict, route: str) -> str:
 def generate_batch(db: DB, jm: SiteAdapter, progress: Progress | None = None, seed: int | None = None,
                    mode: str | None = None) -> int:
     settings = load_settings()
-    k = int(settings.get("batch_size", 20))
+    k = int(settings.get("batch_size", 10))
     mode = mode if mode in MODES else (settings.get("rec_mode") if settings.get("rec_mode") in MODES else "balance")
     mc = MODES[mode]
     rnd = random.Random(seed if seed is not None else time.time())

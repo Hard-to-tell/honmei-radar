@@ -11,7 +11,7 @@ from pathlib import Path
 
 DEFAULTS: dict = {
     # 每批推荐多少本
-    "batch_size": 20,
+    "batch_size": 10,
     # 每批里留给“探索”（热门/新题材）的名额比例
     "explore_ratio": 0.15,
     # 同一作者在一批里最多出现几本
