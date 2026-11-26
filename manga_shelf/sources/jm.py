@@ -21,6 +21,20 @@ def _num(s) -> float:
     return v * {"K": 1e3, "M": 1e6, "W": 1e4, "万": 1e4}.get(m.group(2), 1)
 
 
+_NET_WORDS = ("timeout", "timed out", "connect", "resolve", "ssl", "proxy", "域名", "network", "curl: (")
+
+
+def _friendly_login_error(e: Exception) -> str:
+    t = str(e)
+    low = t.lower()
+    if any(k in low for k in ("password", "密码", "帐号", "账号", "username", "用户名")):
+        return "禁漫登录失败：用户名或密码不对，再检查一下。"
+    if any(k in low for k in _NET_WORDS):
+        return ("连不上禁漫。书架会自动换可用的线路，稍等一会儿再试；还不行的话，打开你平时用的加速器 / 代理，"
+                "再到 设置 → 网络 点“重新检测”。")
+    return f"禁漫登录失败：{t[:200]}"
+
+
 class JMAdapter(SiteAdapter):
     site = "jm"
     name = "禁漫"
@@ -71,7 +85,7 @@ class JMAdapter(SiteAdapter):
         try:
             self._client.login(username, password)
         except Exception as e:
-            raise SiteError(f"禁漫登录失败：{e}") from e
+            raise SiteError(_friendly_login_error(e)) from e
         self._logged = True
 
     def login(self, username: str, password: str) -> str:
@@ -87,7 +101,8 @@ class JMAdapter(SiteAdapter):
 
     # ---------- 转换 ----------
     def web_url(self, wid: str) -> str:
-        return f"https://{self.settings['jm']['web_domain']}/album/{wid}/"
+        from ..net import jm_web_domain
+        return f"https://{jm_web_domain(self.settings)}/album/{wid}/"
 
     def cover_url(self, wid: str) -> str:
         from jmcomic import JmcomicText

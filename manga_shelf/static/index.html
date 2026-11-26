@@ -127,6 +127,9 @@ main { max-width: 1320px; margin: 0 auto; padding: 16px 16px 60px; }
 .gen-go .hint { margin: 0; flex: 1; }
 @media (max-width: 560px) { .modes { grid-template-columns: 1fr; } }
 .note.thin { border-style: solid; border-color: #4a3d12; background: rgba(255,210,31,.06); color: #e8dca8; }
+.note.tip { display: flex; align-items: center; gap: 12px; border-style: solid; color: var(--ink); }
+.note.tip span { flex: 1; }
+.err { color: #ff8a7a; margin: 8px 0 0; font-size: 13px; line-height: 1.6; }
 .note { color: var(--muted); font-size: 13px; background: var(--bg2); border: 1px dashed var(--line); border-radius: 10px; padding: 8px 12px; margin-bottom: 14px; }
 .note .warn { color: var(--skip); }
 
@@ -488,7 +491,7 @@ function render() {
           `<button class="${S.filter === k ? "on" : ""}" onclick="setFilter('${k}')">${t} ${c}</button>`).join("")}
       </div>
     </div>
-    ${thinNote()}
+    ${thinNote()}${tipNote()}
     ${m.ranker_message || m.semantic_error ? `<div class="note">${esc(m.ranker_message || "")}${m.semantic_error ? `<br><span class="warn">语义匹配这批没用上：${esc(m.semantic_error)}</span>` : ""}</div>` : ""}
     ${items.length ? `<div class="grid">${items.map(card).join("")}</div>` : `<div class="empty-msg">这里还空着</div>`}`;
 }
@@ -593,11 +596,11 @@ function onboarding() {
   const s = S.status; if (!s) return "";
   const p = s.sites.pica, j = s.sites.jm;
   const step = (n, done, title, body) => `<div class="step ${done ? "done" : ""}"><h3><span class="num">${done ? "✓" : n}</span>${title}</h3>${body}</div>`;
-  const loginForm = (site, ph) => `<div class="form"><input class="inp" id="${site}U" placeholder="${ph}" autocomplete="off"><input class="inp" id="${site}P" type="password" placeholder="密码"><button class="btn y" onclick="login('${site}', '${site}U', '${site}P')">登录${SITE[site]}</button></div>`;
+  const loginForm = (site, ph) => `<div class="form"><input class="inp" id="${site}U" placeholder="${ph}" autocomplete="off"><input class="inp" id="${site}P" type="password" placeholder="密码"><button class="btn y" id="${site}Go" onclick="login('${site}', '${site}U', '${site}P')">登录${SITE[site]}</button></div><p class="err" id="${site}Err"></p>`;
   const siteStep = (n, site, ph) => {
     const st = s.sites[site];
     if (!st.logged_in) return step(n, false, `登录${SITE[site]}`, `<p>账号只保存在本机，只用于向${SITE[site]}登录。</p>${loginForm(site, ph)}`);
-    if (!st.favorites) return step(n, false, `导入${SITE[site]}收藏`, `<p>已登录。读取收藏列表后会自动补全每本的标签。</p><button class="btn y" onclick="doImport('${site}')">导入收藏</button>`);
+    if (!st.favorites) return step(n, false, `导入${SITE[site]}收藏`, `<p>已登录。点一下就开始读你的收藏，第一次要几分钟（收藏多的话久一点），进度条在走就是在干活，别关窗口就行 ☕</p><button class="btn y" onclick="doImport('${site}')">导入收藏</button>`);
     return step(n, true, `${SITE[site]}收藏 ${st.favorites} 本`, `<p>${st.last_import ? "上次导入 " + ago(st.last_import.at) : ""}</p><button class="btn sm" onclick="doImport('${site}')">重新导入</button>`);
   };
   const ready = p.favorites + j.favorites > 0;
@@ -677,10 +680,15 @@ async function saveAdvanced() {
 async function login(site, uid, pid) {
   const u = $(uid).value.trim(), p = $(pid).value;
   if (!u || !p) return toast("请填写账号和密码");
+  const btn = $(site + "Go"), err = $(site + "Err");
+  if (err) err.textContent = "";
+  if (btn) { btn.disabled = true; btn.textContent = "登录中…"; }
   try {
     await api("/api/login/" + site, { method: "POST", body: JSON.stringify({ username: u, password: p }) });
     toast(`${SITE[site]}登录成功`); await loadStatus(); if (!S.batch) render();
-  } catch (e) { toast(e.message); }
+  } catch (e) {
+    if (err) err.textContent = e.message; else toast(e.message);
+  } finally { if (btn && btn.isConnected) { btn.disabled = false; btn.textContent = "登录" + SITE[site]; } }
 }
 async function logout(site) { await api("/api/logout/" + site, { method: "POST" }); await loadStatus(); if (!S.batch) render(); }
 async function doImport(site) { closeDrawer(); try { await runJob("/api/import/" + site); } catch (e) { toast(e.message); } }
@@ -707,6 +715,15 @@ function openGen() {
   genDlg.showModal(); $("genGo").focus();
 }
 $("genGo").onclick = generate;
+
+function tipNote() {
+  try { if (localStorage.getItem("honmei:tip-feedback")) return ""; } catch (e) {}
+  return `<div class="note tip" id="tipNote"><span>👉 喜欢就点 <b>♡ 心动</b>，不想看点 <b>略过</b>，看过的点 <b>读过</b>。点得越多，下一卷越懂你。</span><button class="btn sm" onclick="hideTip()">知道了</button></div>`;
+}
+function hideTip() {
+  try { localStorage.setItem("honmei:tip-feedback", "1"); } catch (e) {}
+  const t = $("tipNote"); if (t) t.remove();
+}
 
 function thinNote() {
   const s = S.status; if (!s) return "";

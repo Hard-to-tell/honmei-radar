@@ -1,42 +1,34 @@
-# 本命 HONMEI
+# 📚 本命 HONMEI
 
-> 替你找下一本本命。本地优先的个人漫画推荐书架：导入哔咔 / 禁漫收藏，在禁漫里推荐还没收藏的作品。所有数据只在本机。
+> 替你找下一本本命。读懂你在 **哔咔** 和 **禁漫** 的收藏，去禁漫里挑你还没看过、大概率会喜欢的作品。
+> 所有数据只在你自己的电脑上 🔒
 
-这份 README 主要写给帮用户安装、使用这个项目的 AI 助手（Codex、Claude Code 等）。
+## 🚀 最省事：交给 AI 帮你装
 
-## 安装与启动（Windows）
+电脑上有 **Codex**、**Claude Code** 这类能帮你操作电脑的 AI 助手的话，把下面这句话发给它就行：
 
-- 需要 Python 3.10+。用户双击 `start-shelf.bat` 即可：自动建 `.venv`、装依赖、打开 `http://127.0.0.1:8765`。
-- 手动：`python -m venv .venv && .venv\Scripts\pip install -e .`，然后 `.venv\Scripts\python -m manga_shelf serve`。
-- 只看界面：`python -m manga_shelf demo --open`（假数据、独立数据目录）。
-- 可选语义匹配：`install-semantic.bat`；桌面图标：`make-shortcut.bat`。
+```
+帮我把 https://github.com/Hard-to-tell/honmei-radar 下载到电脑上，按里面的 AGENTS.md 装好并打开。
+```
 
-用户在网页“设置”里登录两站、导入收藏，然后点“开卷 ✦”。
+等它弄完，浏览器会自己打开书架 ✨
 
-## 命令
+## 🖱️ 自己装：三步
 
-| 命令 | 作用 |
-|---|---|
-| `python -m manga_shelf serve` | 启动书架网页 |
-| `python -m manga_shelf eval` | 离线检验推荐算法（需联网） |
-| `python -m manga_shelf prompt -o portrait_prompt.txt` | 导出“口味侧写”提示词 |
-| `python -m manga_shelf portrait-import FILE --name 名字` | 把写好的侧写存进本命报告 |
-| `python -m manga_shelf mcp` | 本地 MCP 服务（generate_batch / get_batch / explain_item / record_feedback / open_shelf） |
+1. 点这个页面上绿色的 **Code** 按钮 → **Download ZIP**，解压到任意文件夹
+2. 双击里面的 **`start-shelf.bat`**（第一次要等几分钟，它会自己装好需要的东西 ☕）
+3. 浏览器打开后，跟着页面提示：登录 → 导入收藏 → 点 **开卷 ✦**
 
-用户想要“口味画像 / 侧写”时，按 [PORTRAIT.md](PORTRAIT.md) 做。
+以后再用，还是双击 `start-shelf.bat`。想要桌面图标，就双击 `make-shortcut.bat` 🖼️
 
-## 规则
+## 🙋 常见问题
 
-- 用户数据在 `data/`（`shelf.db`、`settings.json`、封面缓存、日志），已被 `.gitignore` 排除。
-- `shelf.db` 的 `secrets` 表存有账号凭据：**不要读取、输出或发送给任何模型或外部服务**。需要拿数据库做分析时，先复制一份并 `DELETE FROM secrets`。
-- 不要把用户的收藏标题、作者等个人数据提交到仓库或发到网上。
+- **连不上网站？** 书架会自动试几条备用线路。还是不行的话，开着你平时用的加速器 / 代理再试，书架会自己找到它。
+- **账号密码安全吗？** 只存在你电脑里的 `data` 文件夹，只用来登录这两个网站，不会发给任何人。
+- **推荐不准？** 收藏越多越准。顶栏点 **调音** 给几本打打分、卡片上多点 **♡ 心动 / 略过**，会越来越懂你。
+- **怎么更新？** 重新下载 ZIP，把旧文件夹里的 `data` 文件夹拷过去就行（你的收藏和记录都在里面）。
+- **想删掉？** 直接删整个文件夹，什么都不会留下。
 
-## 代码地图
+---
 
-- `manga_shelf/sources/`：站点适配器（`jm.py`、`pica.py`、演示 `demo.py`）
-- `normalize.py` 标题拆解、标签归一、版本去重 · `taste.py` 口味模型（提升度、口味簇、基准样本、跨站标签对照）
-- `features.py` 候选特征 · `ranker.py` 个人排序 · `recommend.py` 检索与组卷 · `calibrate.py` 调音 · `evaluate.py` 检验
-- `insights.py` / `portrait.py` 本命报告与侧写 · `analyzer.py` 可选 AI 解读（Codex / Claude Code / OpenAI 兼容 API）
-- `server.py` FastAPI · `static/` 前端（`index.html` 书架，`report.html` 报告）
-
-开发：`pip install -e ".[dev]" && pytest -q`。待办见 `TODO.md`。
+🤖 给 AI 助手看的安装和开发说明在 [AGENTS.md](AGENTS.md)。

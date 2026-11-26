@@ -63,6 +63,8 @@ class PicaAdapter(SiteAdapter):
         self.settings = load_settings()
         self.throttle = Throttle(float(self.settings.get("rate_interval", 0.15)))
         self.session = requests.Session()
+        from .. import net
+        net.apply(self.settings)
         px = proxies(self.settings)
         if px:
             self.session.trust_env = False
@@ -85,7 +87,8 @@ class PicaAdapter(SiteAdapter):
         try:
             r = self.session.request(method, API + full, headers=headers, json=json_body, timeout=15)
         except requests.RequestException as e:
-            raise SiteError(f"连不上哔咔接口（可能需要代理）：{e}") from e
+            raise SiteError("连不上哔咔。书架已经自动试过备用线路；还不行的话，打开你平时用的加速器 / 代理，"
+                            "再到 设置 → 网络 点“重新检测”。") from e
         try:
             data = r.json()
         except ValueError:

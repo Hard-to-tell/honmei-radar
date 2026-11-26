@@ -6,8 +6,13 @@ if exist ".venv\Scripts\python.exe" goto run
 
 echo 第一次运行：正在创建本地环境并安装依赖，大约需要几分钟……
 set "PY="
-where py >nul 2>nul && set "PY=py -3"
-if not defined PY where python >nul 2>nul && set "PY=python"
+py -3 --version >nul 2>nul && set "PY=py -3"
+if not defined PY python --version >nul 2>nul && set "PY=python"
+if not defined PY (
+  echo 没有找到 Python，正在自动安装（需要一两分钟）……
+  winget install -e --id Python.Python.3.12 --scope user --accept-package-agreements --accept-source-agreements >nul 2>nul
+  if exist "%LOCALAPPDATA%\Programs\Python\Python312\python.exe" set "PY="%LOCALAPPDATA%\Programs\Python\Python312\python.exe""
+)
 if not defined PY goto nopython
 
 %PY% -m venv .venv

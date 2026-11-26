@@ -308,3 +308,15 @@ def test_modes_and_reset(svc):
     assert svc.status()["feedback_counts"].get("心动") == 1   # 表态都还在
     b3 = generate_batch(svc.db, svc.adapter("jm"))
     assert svc.batch(b3)["vol"] == 1
+
+
+def test_pica_pin_and_jm_web_domain():
+    import socket
+    from manga_shelf import net
+    net.pin_host("pica.invalid", "127.0.0.1")
+    assert socket.getaddrinfo("pica.invalid", 443)[0][4][0] == "127.0.0.1"
+    net.pin_host("pica.invalid", None)
+    s = {"jm": {"web_domain": net.JM_WEB_DEFAULT}, "net": {"jm_web": "mirror.example"}}
+    assert net.jm_web_domain(s) == "mirror.example"
+    s["jm"]["web_domain"] = "mine.example"          # 手动填的优先
+    assert net.jm_web_domain(s) == "mine.example"

@@ -236,6 +236,11 @@ def create_app(service: Service | None = None) -> FastAPI:
                 urls += [JmcomicText.get_album_cover_url(wid, d, "_3x4") for d in doms[:3]]
             except Exception:
                 pass
+        if site == "pica" and w.cover:
+            from urllib.parse import urlsplit
+            from .net import PICA_IMAGE_HOSTS
+            parts = urlsplit(w.cover)
+            urls += [parts._replace(netloc=h).geturl() for h in PICA_IMAGE_HOSTS if h != parts.netloc]
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                                  "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"}
         for u in dict.fromkeys(urls):
