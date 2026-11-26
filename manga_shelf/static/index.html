@@ -757,6 +757,13 @@ $("anaModel").onchange = async (e) => {
   S.settings = await api("/api/settings"); toast("已保存");
 };
 $("anaEngine").onchange = async (e) => { await api("/api/settings", { method: "POST", body: JSON.stringify({ analyze: { engine: e.target.value } }) }); toast("已保存"); loadStatus(); };
+// 哔咔链接：网页版常常打不开，点的时候顺手复制标题，方便去 App 里搜
+document.addEventListener("click", (e) => {
+  const a = e.target.closest("a[data-copy]");
+  if (!a) return;
+  const t = a.dataset.copy;
+  try { navigator.clipboard.writeText(t).then(() => toast("标题已复制，网页打不开就去哔咔 App 里搜"), () => {}); } catch (err) {}
+}, true);
 $("batchSel").onchange = (e) => e.target.value && loadBatch(e.target.value);
 $("setBtn").onclick = openDrawer;
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDrawer(); });
@@ -784,14 +791,14 @@ function calCard() {
   const it = CAL.items[CAL.i], n = CAL.items.length, a = calCur();
   const art = a.reasons.has("艺术");
   const pills = (names, cls = "") => names.map(x => `<button class="pill ${cls} ${a.reasons.has(x) ? "on" : ""}" onclick="calWhy('${x}')">${x}</button>`).join("");
-  const link = it.url ? `href="${esc(it.url)}" target="_blank" rel="noopener noreferrer"` : "";
+  const link = it.url ? `href="${esc(it.url)}" target="_blank" rel="noopener noreferrer"${it.site === "pica" ? ` data-copy="${esc(it.title)}"` : ""}` : "";
   $("calBody").innerHTML = `
     <div class="steps">${CAL.items.map((_, k) => `<span class="${k < CAL.i || (k === CAL.i && a.level !== null) ? "on" : ""}"></span>`).join("")}</div>
     <div class="cv"><a class="cvimg" ${link} title="在${esc(it.site_name)}打开"><img src="${it.cover}" alt="" onerror="this.style.visibility='hidden'"></a>
       <div><div class="ti"><a ${link} title="${esc(it.full_title)}">${esc(it.title)}</a></div>
         <div class="meta">${esc(it.source_name)} · ${esc(it.site_name)}${it.authors.length ? " · " + esc(it.authors.join("、")) : ""}${it.cluster ? ` · 口味簇「${esc(it.cluster)}」` : ""}</div>
         <div class="tg">${it.tags.map(t => `<span>${esc(t)}</span>`).join("")}</div>
-        ${it.url ? `<a class="open" ${link}>去${esc(it.site_name)}翻一眼 ↗</a>` : ""}</div></div>
+        ${it.url ? `<a class="open" ${link}>去${esc(it.site_name)}翻一眼 ↗</a>` : ""}${it.site === "pica" ? `<div class="hint" style="margin:6px 0 0">网页版在国内要代理、还要单独登录。点链接会顺手复制标题，打不开就去哔咔 App 里搜。</div>` : ""}</div></div>
     <div class="rs"><span class="lbl">喜欢它是因为（可不选）</span>${pills(["实用", "艺术"])}${art ? pills(["画风", "题材", "剧情"], "sub") : ""}</div>
     <div class="lv4">${LV.map(([v, name, key]) => `<button class="l${v} ${a.level === v ? "on" : ""}" onclick="calRate(${v})">${name}<small>按 ${key}</small></button>`).join("")}</div>
     <div class="nav"><button onclick="calBack()" ${CAL.i ? "" : "disabled"}>← 上一本</button>
