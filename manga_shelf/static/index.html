@@ -163,18 +163,19 @@ main { max-width: 1320px; margin: 0 auto; padding: 16px 16px 60px; }
 @keyframes deal { from { opacity: 0; transform: translateY(-28px) scale(.94) rotate(-2.5deg); } to { opacity: 1; transform: none; } }
 .flip { position: relative; height: 100%; transform-style: preserve-3d; transition: transform .6s cubic-bezier(.2,.75,.25,1); }
 .flip.down { transform: rotateY(180deg); }
+.slot.is-down { align-self: start; }
+.flip.down .card .body, .flip.opening .card .body { display: none; }
+.flip.down .card, .flip.opening .card { height: auto; }
+.flip.unfold .card .body { animation: bodyIn .35s ease-out; }
+@keyframes bodyIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
 .flip > .card { height: 100%; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
 .back { position: absolute; inset: 0; transform: rotateY(180deg); backface-visibility: hidden; -webkit-backface-visibility: hidden;
-  border: 1px solid #3a3426; border-radius: var(--radius); cursor: pointer; color: var(--y); font: inherit; padding: 0;
-  background: radial-gradient(circle at 50% 42%, rgba(255,210,31,.16), transparent 58%),
-    repeating-linear-gradient(45deg, rgba(255,210,31,.05) 0 2px, transparent 2px 14px),
-    repeating-linear-gradient(-45deg, rgba(255,210,31,.05) 0 2px, transparent 2px 14px), #15130e;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; transition: box-shadow .2s, border-color .2s; }
-.back::before { content: ""; position: absolute; inset: 9px; border: 1px solid rgba(255,210,31,.22); border-radius: 9px; pointer-events: none; }
-.back .bk-star { width: 46px; height: 46px; fill: var(--y); filter: drop-shadow(0 0 12px rgba(255,210,31,.5)); transition: transform .3s; }
-.back .bk-no { font-weight: 800; letter-spacing: .12em; color: var(--ink); }
-.back .bk-vol { position: absolute; bottom: 18px; font-size: 12px; letter-spacing: .2em; color: var(--muted); }
-.back .bk-tap { position: absolute; top: 18px; font-size: 12px; color: var(--muted); opacity: 0; transition: opacity .2s; }
+  border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; color: var(--y); font: inherit; padding: 0;
+  background: radial-gradient(circle at 50% 46%, rgba(255,210,31,.10), transparent 55%), var(--panel);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; transition: box-shadow .2s, border-color .2s; }
+.back .bk-star { width: 40px; height: 40px; fill: var(--y); transition: transform .3s; }
+.back .bk-no { font-size: 12px; letter-spacing: .14em; color: var(--muted); }
+.back .bk-tap { position: absolute; bottom: 16px; font-size: 12px; color: var(--muted); opacity: 0; transition: opacity .2s; }
 .back:hover { border-color: var(--y); box-shadow: 0 10px 30px rgba(255,210,31,.14); }
 .back:hover .bk-star { transform: rotate(45deg) scale(1.08); }
 .back:hover .bk-tap { opacity: 1; }
@@ -214,6 +215,7 @@ main { max-width: 1320px; margin: 0 auto; padding: 16px 16px 60px; }
 @keyframes cast { 0% { box-shadow: 0 0 0 0 rgba(255,210,31,.7); } 100% { box-shadow: 0 0 0 14px rgba(255,210,31,0); } }
 dialog[open] { animation: pop .2s cubic-bezier(.2,.75,.25,1); }
 @keyframes pop { from { opacity: 0; transform: scale(.96) translateY(6px); } to { opacity: 1; transform: none; } }
+.reveal-bar { display: flex; align-items: center; justify-content: center; gap: 14px; margin: 0 0 16px; color: var(--muted); font-size: 13px; }
 .pop { position: fixed; z-index: 70; background: var(--panel2); border: 1px solid #3d3d3d; border-radius: 12px; padding: 10px 12px; box-shadow: 0 12px 32px rgba(0,0,0,.5);
   font-size: 13px; display: flex; flex-direction: column; gap: 8px; max-width: 260px; animation: pop .15s ease-out; }
 .pop[hidden] { display: none; }
@@ -573,7 +575,6 @@ function render() {
     <div class="head">
       <div><h2>Vol. <span>${b.vol ?? b.id}</span></h2><div class="sub">${fmtTime(b.created_at)}${m.mode && m.mode !== "balance" ? ` · ${esc(m.mode_name)}` : ""} · ${engine} · 从 ${m.pool ?? "?"} 本候选里挑出 ${b.items.length} 本</div></div>
       <span class="spacer"></span>
-      ${anyDown ? `<button class="btn sm" id="revealAll" onclick="revealAll()" title="也可以一张张点开">全部翻开</button>` : ""}
       <div class="tabs">
         ${[["all", "全部", b.items.length], ["none", "未翻阅", n("none")], ["want", "心动", n("want")]].map(([k, t, c]) =>
           `<button class="${S.filter === k ? "on" : ""}" onclick="setFilter('${k}')">${t} ${c}</button>`).join("")}
@@ -581,6 +582,7 @@ function render() {
     </div>
     ${thinNote()}${tipNote()}
     ${m.ranker_message || m.semantic_error ? `<div class="note">${esc(m.ranker_message || "")}${m.semantic_error ? `<br><span class="warn">语义匹配这批没用上：${esc(m.semantic_error)}</span>` : ""}</div>` : ""}
+    ${anyDown ? `<div class="reveal-bar" id="revealAll"><span>点卡片一张张翻开</span><button class="btn y" onclick="revealAll()">全部翻开</button></div>` : ""}
     ${items.length ? `<div class="grid">${items.map((it, i) => card(it, i, rar)).join("")}</div>` : `<div class="empty-msg">这里还空着</div>`}`;
   S.justDealt = null;
 }
@@ -623,7 +625,11 @@ function reveal(pos, quiet) {
   dealSet(b.id, left ? d : null);
   const el = $("card-" + pos);
   if (el) {
-    el.querySelector(".flip").classList.remove("down");
+    // 先翻过来（只露封面），翻完再展开下面的信息
+    const f = el.querySelector(".flip");
+    f.classList.add("opening"); f.classList.remove("down");
+    setTimeout(() => { f.classList.remove("opening"); f.classList.add("unfold"); el.classList.remove("is-down"); }, 560);
+    setTimeout(() => f.classList.remove("unfold"), 950);
     const c = el.querySelector(".card");
     if (c.classList.contains("r-gold") || c.classList.contains("r-rainbow")) { c.classList.remove("just"); void c.offsetWidth; c.classList.add("just"); }
   }
@@ -641,11 +647,11 @@ function card(it, idx = 0, rar = {}) {
   const r = rar[it.pos] || "";
   const down = isDown(it);
   const bl = new Set(it.blocked || []);
-  const deal = S.justDealt === S.batch.id ? ` deal" style="--d:${idx * 70}ms` : "";
+  const dealing = S.justDealt === S.batch.id;
   const read = fb === "seen" || fb === "seen_like";
   const btn = (l) => `<button class="${l} ${fb === l || (l === "seen" && read) ? "on" : ""}" onclick="feedback(${it.pos}, '${l}')">${LABEL[l]}</button>`;
   const seenQ = read ? `<div class="seenq"><span>读过，还喜欢吗？</span><button class="${fb === "seen_like" ? "on" : ""}" onclick="feedback(${it.pos}, '${fb === "seen_like" ? "seen" : "seen_like"}', true)">${fb === "seen_like" ? "♥ 喜欢" : "♡ 喜欢"}</button></div>` : "";
-  return `<div class="slot${deal}" id="card-${it.pos}"><div class="flip${down ? " down" : ""}">
+  return `<div class="slot${dealing ? " deal" : ""}${down ? " is-down" : ""}"${dealing ? ` style="--d:${idx * 70}ms"` : ""} id="card-${it.pos}"><div class="flip${down ? " down" : ""}">
   <div class="card ${fb ? "fb-" + fb : ""}${r ? " r-" + r : ""}${bl.size ? " is-blocked" : ""}${S.shine === it.pos ? " just" : ""}">
     <a class="cover" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">
       <div class="ph">${esc(it.core_title)}</div>
@@ -662,7 +668,7 @@ function card(it, idx = 0, rar = {}) {
       <button class="why" onclick="why(${it.pos})">为何是它 →</button>
       <div class="acts">${btn("want")}${btn("skip")}${btn("dislike")}${btn("seen")}</div>${seenQ}
     </div></div>
-  <button class="back" onclick="reveal(${it.pos})" aria-label="翻开第 ${it.pos} 本"><span class="bk-tap">点开</span><svg class="bk-star" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0C12.9 7.6 16.4 11.1 24 12 16.4 12.9 12.9 16.4 12 24 11.1 16.4 7.6 12.9 0 12 7.6 11.1 11.1 7.6 12 0Z"/></svg><span class="bk-no">No.${it.pos}</span><span class="bk-vol">VOL.${S.batch.vol ?? S.batch.id}</span></button>
+  <button class="back" onclick="reveal(${it.pos})" aria-label="翻开第 ${it.pos} 本"><svg class="bk-star" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0C12.9 7.6 16.4 11.1 24 12 16.4 12.9 12.9 16.4 12 24 11.1 16.4 7.6 12.9 0 12 7.6 11.1 11.1 7.6 12 0Z"/></svg><span class="bk-no">No.${it.pos}</span><span class="bk-tap">点开</span></button>
   </div></div>`;
 }
 

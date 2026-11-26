@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "honmei"
-version = "0.5.0"
+version = "0.5.1"
 description = "本命 HONMEI：本地优先的哔咔 + 禁漫个人推荐书架"
 readme = "README.md"
 requires-python = ">=3.10"
