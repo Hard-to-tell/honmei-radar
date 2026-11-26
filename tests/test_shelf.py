@@ -358,3 +358,23 @@ def test_title_hints_and_themes():
         pick = _pick(cands, scores, ["x"] * 40, 8, 0, 9, random.Random(0), div=div)
         return 1 - np.mean([sim[x, y] for x in pick for y in pick if x < y])
     assert variety(0.6) > variety(0.0)
+
+
+def test_block_tags(svc):
+    from collections import Counter
+
+    from manga_shelf.importer import import_favorites
+    from manga_shelf.normalize import norm_tag
+    from manga_shelf.recommend import generate_batch
+    import_favorites(svc.db, svc.adapter("pica"))
+    import_favorites(svc.db, svc.adapter("jm"))
+    b1 = generate_batch(svc.db, svc.adapter("jm"), seed=1)
+    items = svc.batch(b1)["items"]
+    assert len(items) == 12
+    top = Counter(t for it in items for t in it["tags"]).most_common(1)[0][0]
+    assert svc.block_tag(top) == [top]
+    assert any(it["blocked"] for it in svc.batch(b1)["items"])          # 已经出来的这卷标上“已拉黑”
+    b2 = generate_batch(svc.db, svc.adapter("jm"), seed=2)
+    for it in svc.batch(b2)["items"]:
+        assert norm_tag(top) not in {norm_tag(t) for t in svc.db.get_work("jm", it["wid"]).tags}
+    assert svc.block_tag(top, False) == []

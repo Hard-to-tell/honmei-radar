@@ -18,6 +18,10 @@ DEFAULTS: dict = {
     "max_per_author": 2,
     # 开卷口味：balance 平衡 / safe 稳妥 / fresh 尝鲜 / niche 冷门
     "rec_mode": "balance",
+    # 拉黑的标签：带这些标签（含两站的同义说法）的作品不再推荐
+    "blocked_tags": [],
+    # 抽卡动画：新的一卷背面朝上，一张张点开。电脑开了“减少动画”时自动关
+    "card_anim": True,
     # 手动代理，例如 "http://127.0.0.1:7890"；留空则自动检测（直连 / 系统代理 / 常见本地代理端口）
     "proxy": "",
     "jm": {

@@ -24,7 +24,7 @@ from dataclasses import replace
 from .features import FeatureBuilder, Profile, work_people, work_tokens
 from .importer import ensure_details
 from .models import Work
-from .normalize import dedup_keys, norm, norm_person, parse_title, title_key
+from .normalize import dedup_keys, norm, norm_person, norm_tag, norm_tags, parse_title, title_key
 from .ranker import final_scores, train
 from .semantic import SemanticUnavailable, get_semantic
 from .sources import SiteError
@@ -157,6 +157,10 @@ def gather_candidates(db: DB, jm: SiteAdapter, profile: Profile, progress: Progr
     add(_cached_search(db, jm, "rank:week:1", lambda: jm.ranking("week", 1)), "explore")
     add(_cached_search(db, jm, "rank:month:1", lambda: jm.ranking("month", 1)), "explore")
     return found, hints
+
+
+def blocked_tag_set(settings: dict) -> set[str]:
+    return {n for n in (norm_tag(t) for t in settings.get("blocked_tags") or []) if n}
 
 
 def _exclusion(db: DB) -> tuple[set[str], set[str], set[tuple[str, str]]]:
@@ -414,9 +418,12 @@ def generate_batch(db: DB, jm: SiteAdapter, progress: Progress | None = None, se
         found, hints = gather_candidates(db, jm, profile, progress, taste)
 
     jm_ids, keys, blocked = _exclusion(db)
+    banned = blocked_tag_set(settings)
     pool: list[tuple[Work, str]] = []
     for wid, (w, route) in found.items():
         if wid in jm_ids or ("jm", wid) in blocked:
+            continue
+        if banned and banned & set(norm_tags(w.tags)):
             continue
         if dedup_keys(w.title, w.authors) & keys:
             continue  # 已收藏（含另一站）或表过态的同一本的其他版本
@@ -441,6 +448,8 @@ def generate_batch(db: DB, jm: SiteAdapter, progress: Progress | None = None, se
     cands, routes = [], []
     for w, route in head:
         full = db.get_work("jm", w.wid) or w
+        if banned and banned & set(norm_tags(full.tags)):
+            continue   # 细读后才看到的标签
         cands.append(full)
         routes.append(route)
 
@@ -478,6 +487,7 @@ def generate_batch(db: DB, jm: SiteAdapter, progress: Progress | None = None, se
     chosen = _pick(cands, scores, routes, k, explore_k, per_author, rnd, cl, cinfo,
                    hot_k=1 if mc.get("hot", True) else 0, div=mc.get("div", DIV_DEFAULT))
 
+    rnd.shuffle(chosen)   # 卷里的次序打乱：No.1 不一定是最契合的，翻开才知道
     items = []
     for i in chosen:
         r = dict(reasons[i])
@@ -503,6 +513,7 @@ def batch_view(db: DB, batch_id: int) -> dict | None:
     if not meta:
         return None
     fb = db.feedback_map()
+    banned = blocked_tag_set(load_settings())
     items = []
     for it in db.batch_items(batch_id):
         w = db.get_work(it["site"], it["wid"])
@@ -518,6 +529,7 @@ def batch_view(db: DB, batch_id: int) -> dict | None:
             "source": "禁漫" if w.site == "jm" else "哔咔",
             "reason": it["reason"], "route": it["route"], "score": it["score"], "features": it["features"],
             "feedback": f["label"] if f else None,
+            "blocked": [t for t in w.tags if norm_tag(t) in banned],
         })
     meta["items"] = items
     return meta

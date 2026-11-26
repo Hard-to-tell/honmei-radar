@@ -137,7 +137,6 @@ main { max-width: 1320px; margin: 0 auto; padding: 16px 16px 60px; }
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(208px, 1fr)); gap: 18px; }
 .card { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; display: flex; flex-direction: column; transition: transform .15s, border-color .15s; }
 .card:hover { border-color: #444; transform: translateY(-2px); }
-.card.fb-want { border-color: var(--y); box-shadow: 0 0 0 1px var(--y) inset; }
 .card.fb-skip, .card.fb-seen, .card.fb-dislike { opacity: .45; }
 .cover { position: relative; aspect-ratio: 3 / 4; background: linear-gradient(160deg, #222, #151515); display: block; overflow: hidden; }
 .cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
@@ -152,7 +151,80 @@ main { max-width: 1320px; margin: 0 auto; padding: 16px 16px 60px; }
 .meta { color: var(--muted); font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .reason { font-size: 12.5px; color: #d9d4c7; border-left: 2px solid var(--y); padding: 2px 0 2px 8px; display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
 .tags { display: flex; flex-wrap: wrap; gap: 4px; }
-.tag { font-size: 11.5px; background: var(--bg2); border: 1px solid var(--line); color: var(--muted); border-radius: 999px; padding: 0 8px; }
+.tag { font-size: 11.5px; background: var(--bg2); border: 1px solid var(--line); color: var(--muted); border-radius: 999px; padding: 0 8px; cursor: pointer; font-family: inherit; line-height: 1.55; }
+.tag:hover { border-color: #555; color: var(--ink); }
+.tag.bl { text-decoration: line-through; color: var(--skip); border-color: rgba(255,90,95,.4); }
+.card.is-blocked .cover, .card.is-blocked .title, .card.is-blocked .reason { opacity: .4; }
+.blnote { font-size: 12px; color: var(--skip); }
+
+/* ---------- 抽卡 ---------- */
+.slot { perspective: 1400px; min-width: 0; }
+.slot.deal { animation: deal .5s var(--d, 0ms) both cubic-bezier(.2,.75,.25,1); }
+@keyframes deal { from { opacity: 0; transform: translateY(-28px) scale(.94) rotate(-2.5deg); } to { opacity: 1; transform: none; } }
+.flip { position: relative; height: 100%; transform-style: preserve-3d; transition: transform .6s cubic-bezier(.2,.75,.25,1); }
+.flip.down { transform: rotateY(180deg); }
+.flip > .card { height: 100%; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.back { position: absolute; inset: 0; transform: rotateY(180deg); backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  border: 1px solid #3a3426; border-radius: var(--radius); cursor: pointer; color: var(--y); font: inherit; padding: 0;
+  background: radial-gradient(circle at 50% 42%, rgba(255,210,31,.16), transparent 58%),
+    repeating-linear-gradient(45deg, rgba(255,210,31,.05) 0 2px, transparent 2px 14px),
+    repeating-linear-gradient(-45deg, rgba(255,210,31,.05) 0 2px, transparent 2px 14px), #15130e;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 10px; transition: box-shadow .2s, border-color .2s; }
+.back::before { content: ""; position: absolute; inset: 9px; border: 1px solid rgba(255,210,31,.22); border-radius: 9px; pointer-events: none; }
+.back .bk-star { width: 46px; height: 46px; fill: var(--y); filter: drop-shadow(0 0 12px rgba(255,210,31,.5)); transition: transform .3s; }
+.back .bk-no { font-weight: 800; letter-spacing: .12em; color: var(--ink); }
+.back .bk-vol { position: absolute; bottom: 18px; font-size: 12px; letter-spacing: .2em; color: var(--muted); }
+.back .bk-tap { position: absolute; top: 18px; font-size: 12px; color: var(--muted); opacity: 0; transition: opacity .2s; }
+.back:hover { border-color: var(--y); box-shadow: 0 10px 30px rgba(255,210,31,.14); }
+.back:hover .bk-star { transform: rotate(45deg) scale(1.08); }
+.back:hover .bk-tap { opacity: 1; }
+.card.r-gold, .card.r-silver, .card.r-rainbow { border: 2px solid transparent; }
+.card.r-gold { background: linear-gradient(var(--panel), var(--panel)) padding-box,
+  linear-gradient(135deg, #fff4b8, #ffd21f 28%, #a8770a 55%, #ffe36b 80%, #c99a12) border-box; box-shadow: 0 0 20px rgba(255,210,31,.22); }
+.card.r-silver { background: linear-gradient(var(--panel), var(--panel)) padding-box,
+  linear-gradient(135deg, #ffffff, #9aa3ad 30%, #e8ebef 55%, #6b7380 80%, #cfd5dc) border-box; }
+.card.r-rainbow { background: linear-gradient(var(--panel), var(--panel)) padding-box,
+  linear-gradient(120deg, #ff5a5f, #ffb13b, #ffd21f, #7bd88f, #4cc9f0, #8f7bff, #ff6ad5) border-box; box-shadow: 0 0 22px rgba(143,123,255,.25); }
+.rar { position: absolute; z-index: 2; left: 10px; bottom: 9px; font-size: 11.5px; font-weight: 800; letter-spacing: .06em; border-radius: 6px; padding: 0 7px; color: #111; }
+.r-gold .rar { background: linear-gradient(135deg, #fff4b8, #ffd21f 45%, #c99a12); }
+.r-silver .rar { background: linear-gradient(135deg, #fff, #b9c0c8); }
+.r-rainbow .rar { background: linear-gradient(90deg, #ff8a8d, #ffd21f, #7bd88f, #4cc9f0, #b39dff); }
+.card.just::before { content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none; border-radius: inherit;
+  background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,.38) 50%, transparent 65%); transform: translateX(-120%);
+  animation: shine .9s .25s ease-out forwards; }
+.card { position: relative; }
+@keyframes shine { to { transform: translateX(120%); } }
+
+/* 等新的一卷时洗牌 */
+.deck { display: flex; justify-content: center; padding: 26px 0 8px; }
+.deck[hidden] { display: none; }
+.deck .pile { position: relative; width: 66px; height: 88px; }
+.deck .pile i { position: absolute; inset: 0; border-radius: 9px; border: 1px solid #4a4030;
+  background: radial-gradient(circle at 50% 45%, rgba(255,210,31,.35) 0 6px, rgba(255,210,31,.12) 7px, transparent 60%), #15130e; }
+.deck .pile i:nth-child(1) { animation: shufL 1.6s ease-in-out infinite; }
+.deck .pile i:nth-child(2) { animation: shufR 1.6s .4s ease-in-out infinite; }
+.deck .pile i:nth-child(3) { transform: rotate(-3deg); }
+@keyframes shufL { 0%, 100% { transform: translateX(0) rotate(0); z-index: 1; } 40% { transform: translateX(-46px) rotate(-10deg); z-index: 1; } 60% { z-index: 4; } 80% { transform: translateX(0) rotate(2deg); z-index: 4; } }
+@keyframes shufR { 0%, 100% { transform: translateX(0) rotate(0); z-index: 2; } 40% { transform: translateX(46px) rotate(10deg); z-index: 2; } 60% { z-index: 5; } 80% { transform: translateX(0) rotate(-2deg); z-index: 5; } }
+#genBtn .star { display: inline-block; font-style: normal; transition: transform .5s; }
+#genBtn:hover .star { transform: rotate(72deg) scale(1.15); }
+#genBtn.busy .star { animation: spin 2.4s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+#genBtn.cast { animation: cast .6s ease-out; }
+@keyframes cast { 0% { box-shadow: 0 0 0 0 rgba(255,210,31,.7); } 100% { box-shadow: 0 0 0 14px rgba(255,210,31,0); } }
+dialog[open] { animation: pop .2s cubic-bezier(.2,.75,.25,1); }
+@keyframes pop { from { opacity: 0; transform: scale(.96) translateY(6px); } to { opacity: 1; transform: none; } }
+.pop { position: fixed; z-index: 70; background: var(--panel2); border: 1px solid #3d3d3d; border-radius: 12px; padding: 10px 12px; box-shadow: 0 12px 32px rgba(0,0,0,.5);
+  font-size: 13px; display: flex; flex-direction: column; gap: 8px; max-width: 260px; animation: pop .15s ease-out; }
+.pop[hidden] { display: none; }
+.pop .row { gap: 6px; justify-content: flex-end; }
+.blist { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 6px; }
+.blist span { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; border: 1px solid rgba(255,90,95,.4); color: #ffb3b5; border-radius: 999px; padding: 1px 4px 1px 10px; }
+.blist button { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 0 4px; font-size: 14px; line-height: 1; }
+.blist button:hover { color: var(--ink); }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
 .why { align-self: flex-start; background: none; border: 0; padding: 0; color: var(--y); font-size: 12px; cursor: pointer; }
 .why:hover { text-decoration: underline; }
 .acts { display: grid; grid-template-columns: 1.2fr 1fr 1fr 1fr; gap: 5px; margin-top: auto; padding-top: 4px; }
@@ -162,7 +234,6 @@ main { max-width: 1320px; margin: 0 auto; padding: 16px 16px 60px; }
 .acts button.skip.on { background: var(--skip); border-color: var(--skip); color: #fff; }
 .acts button.dislike.on { background: #6b1f22; border-color: var(--skip); color: #fff; }
 .acts button.seen.on { background: var(--seen); border-color: var(--seen); color: #111; }
-.card.fb-seen_like { border-color: #6d6a5c; }
 .seenq { display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 12px; color: var(--muted); }
 .seenq button { border: 1px solid var(--line); background: none; color: var(--muted); border-radius: 999px; padding: 2px 10px; font-size: 12px; cursor: pointer; transition: color .15s, border-color .15s, background .15s; }
 .seenq button:hover { color: var(--y); border-color: var(--y); }
@@ -244,12 +315,13 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
     <button class="btn dotbtn" id="calBtn" title="给几本作品打分，让推荐更懂你" onclick="openCal()">调音 · 5 本</button>
     <a class="btn" id="repBtn" href="/report" title="你的口味年报：统计看板 + AI 画像">本命报告</a>
     <button class="btn" id="anaBtn" title="请 Codex / Claude / API 解读这一卷">✧ 解读</button>
-    <button class="btn y" id="genBtn" title="翻开新的一卷推荐">开卷 ✦</button>
+    <button class="btn y" id="genBtn" title="翻开新的一卷推荐">开卷 <i class="star">✦</i></button>
     <button class="btn" id="setBtn" title="账号与设置">设置</button>
   </div>
 </header>
 
 <main>
+  <div class="deck" id="deck" hidden><div class="pile"><i></i><i></i><i></i></div></div>
   <div id="tasks"></div>
   <div id="content"></div>
 </main>
@@ -286,6 +358,13 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
         <div style="flex:1"><div>语义匹配</div><div class="hint" style="margin:0" id="semHint"></div></div>
         <button class="btn sm" id="semInstall" hidden onclick="installSemantic()">一键安装</button>
       </div>
+      <div class="row" style="margin-top:8px">
+        <label class="switch"><input type="checkbox" id="animOn"><span></span></label>
+        <div style="flex:1"><div>抽卡动画</div><div class="hint" style="margin:0">新的一卷背面朝上，一张张点开。电脑较慢可以关掉；系统开了“减少动画”时自动关。</div></div>
+      </div>
+      <div style="margin-top:10px"><div>拉黑的标签</div>
+        <div class="blist" id="blockedList"></div>
+        <div class="hint" id="blockedHint" style="margin:4px 0 0">点卡片上的标签就能拉黑，带这个标签的作品以后不再推荐。</div></div>
       <div class="hint" id="rankerState" style="margin-top:10px"></div>
       <div class="row" style="margin-top:10px"><button class="btn sm" onclick="runEval()" title="把最新 20% 的禁漫收藏藏起来，看新旧算法谁能把它们找回来">检验算法</button>
         <span class="hint" id="evalMsg" style="margin:0;flex:1"></span></div>
@@ -344,6 +423,7 @@ a.btn { text-decoration: none; display: inline-flex; align-items: center; }
     <div class="gen-go"><span class="hint">会记住这次的选择，下次直接是它。</span><button class="btn y" id="genGo">开卷 ✦</button></div>
   </div>
 </dialog>
+<div class="pop" id="tagPop" hidden></div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -449,13 +529,18 @@ function startPolling() {
     for (const id of lastRunning) if (!running.has(id)) {
       const j = jobs.find(x => x.id === id);
       await loadStatus();
-      if (j && j.kind === "generate" && j.status === "done") await loadBatch(j.result.batch_id);
+      if (j && j.kind === "generate" && j.status === "done") {
+        if (animOn()) { dealSet(j.result.batch_id, new Set()); S.justDealt = j.result.batch_id; S.filter = "all"; }
+        await loadBatch(j.result.batch_id);
+      }
       else if (j && j.kind.startsWith("analyze") && j.status === "done") showAnalysis(j.result);
       else if (j && j.kind.startsWith("analyze") && j.status === "error") showAnalysisError(j);
       else if (!S.batch) render();
     }
     lastRunning = running;
-    $("genBtn").disabled = jobs.some(j => j.kind === "generate" && j.status === "running");
+    const gen = jobs.some(j => j.kind === "generate" && j.status === "running");
+    $("genBtn").disabled = gen; $("genBtn").classList.toggle("busy", gen);
+    $("deck").hidden = !(gen && animOn());
     if (!running.size && !jobs.some(j => j.status === "done")) { clearInterval(pollTimer); pollTimer = null; }
   }, 1000);
 }
@@ -481,11 +566,14 @@ function render() {
   const m = b.meta || {};
   const engine = b.engine.includes("personal") ? "固定打分 + 你的个人口味模型" : b.engine.includes("semantic") ? "固定打分 + 语义匹配" : "固定打分";
   const items = b.items.filter(it => S.filter === "all" ? true : S.filter === "none" ? !it.feedback : it.feedback === S.filter);
+  const rar = rarities(b.items);
+  const anyDown = b.items.some(isDown);
   const n = (f) => b.items.filter(it => f === "none" ? !it.feedback : it.feedback === f).length;
   c.innerHTML = `
     <div class="head">
       <div><h2>Vol. <span>${b.vol ?? b.id}</span></h2><div class="sub">${fmtTime(b.created_at)}${m.mode && m.mode !== "balance" ? ` · ${esc(m.mode_name)}` : ""} · ${engine} · 从 ${m.pool ?? "?"} 本候选里挑出 ${b.items.length} 本</div></div>
       <span class="spacer"></span>
+      ${anyDown ? `<button class="btn sm" id="revealAll" onclick="revealAll()" title="也可以一张张点开">全部翻开</button>` : ""}
       <div class="tabs">
         ${[["all", "全部", b.items.length], ["none", "未翻阅", n("none")], ["want", "心动", n("want")]].map(([k, t, c]) =>
           `<button class="${S.filter === k ? "on" : ""}" onclick="setFilter('${k}')">${t} ${c}</button>`).join("")}
@@ -493,29 +581,89 @@ function render() {
     </div>
     ${thinNote()}${tipNote()}
     ${m.ranker_message || m.semantic_error ? `<div class="note">${esc(m.ranker_message || "")}${m.semantic_error ? `<br><span class="warn">语义匹配这批没用上：${esc(m.semantic_error)}</span>` : ""}</div>` : ""}
-    ${items.length ? `<div class="grid">${items.map(card).join("")}</div>` : `<div class="empty-msg">这里还空着</div>`}`;
+    ${items.length ? `<div class="grid">${items.map((it, i) => card(it, i, rar)).join("")}</div>` : `<div class="empty-msg">这里还空着</div>`}`;
+  S.justDealt = null;
+}
+/* ---------- 抽卡：新的一卷背面朝上，一张张点开 ---------- */
+function animOn() {
+  if (S.settings && S.settings.card_anim === false) return false;
+  try { return !matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return true; }
+}
+const DEAL_MEM = {};
+function dealGet(bid) {
+  try { const v = localStorage.getItem("honmei:deal:" + bid); if (v !== null) return new Set(JSON.parse(v)); } catch (e) {}
+  return DEAL_MEM[bid] || null;
+}
+function dealSet(bid, set) {
+  DEAL_MEM[bid] = set;
+  try { set === null ? localStorage.removeItem("honmei:deal:" + bid) : localStorage.setItem("honmei:deal:" + bid, JSON.stringify([...set])); } catch (e) {}
+}
+function isDown(it) {
+  if (!S.batch || !animOn() || it.feedback) return false;
+  const d = dealGet(S.batch.id);
+  return !!d && !d.has(it.pos);
+}
+// 稀有度只是图个好看：契合度排前三成的是金卡，站内热门偶遇是银卡，点了心动 / 读过·喜欢的一律彩卡
+function rarities(items) {
+  const main = items.filter(it => it.route !== "explore" && it.route !== "cold").sort((a, b) => b.score - a.score);
+  const gold = new Set(main.slice(0, Math.max(1, Math.round(items.length * 0.3))).map(it => it.pos));
+  const out = {};
+  for (const it of items) {
+    out[it.pos] = it.feedback === "want" || it.feedback === "seen_like" ? "rainbow"
+      : gold.has(it.pos) ? "gold" : (it.route === "explore" || it.route === "cold") ? "silver" : "";
+  }
+  return out;
+}
+const RAR_NAME = { gold: "✦ 金卡", silver: "偶遇", rainbow: "♥ 彩卡" };
+function reveal(pos, quiet) {
+  const b = S.batch; if (!b) return;
+  const d = dealGet(b.id) || new Set();
+  d.add(pos);
+  const left = b.items.filter(it => !it.feedback && !d.has(it.pos)).length;
+  dealSet(b.id, left ? d : null);
+  const el = $("card-" + pos);
+  if (el) {
+    el.querySelector(".flip").classList.remove("down");
+    const c = el.querySelector(".card");
+    if (c.classList.contains("r-gold") || c.classList.contains("r-rainbow")) { c.classList.remove("just"); void c.offsetWidth; c.classList.add("just"); }
+  }
+  const all = $("revealAll"); if (all && !left) all.remove();
+}
+function revealAll() {
+  const b = S.batch; if (!b) return;
+  const down = b.items.filter(isDown).map(it => it.pos);
+  down.forEach((pos, i) => setTimeout(() => reveal(pos), i * 90));
 }
 function setFilter(f) { S.filter = f; render(); }
 
-function card(it) {
+function card(it, idx = 0, rar = {}) {
   const fb = it.feedback;
+  const r = rar[it.pos] || "";
+  const down = isDown(it);
+  const bl = new Set(it.blocked || []);
+  const deal = S.justDealt === S.batch.id ? ` deal" style="--d:${idx * 70}ms` : "";
   const read = fb === "seen" || fb === "seen_like";
   const btn = (l) => `<button class="${l} ${fb === l || (l === "seen" && read) ? "on" : ""}" onclick="feedback(${it.pos}, '${l}')">${LABEL[l]}</button>`;
   const seenQ = read ? `<div class="seenq"><span>读过，还喜欢吗？</span><button class="${fb === "seen_like" ? "on" : ""}" onclick="feedback(${it.pos}, '${fb === "seen_like" ? "seen" : "seen_like"}', true)">${fb === "seen_like" ? "♥ 喜欢" : "♡ 喜欢"}</button></div>` : "";
-  return `<div class="card ${fb ? "fb-" + fb : ""}" id="card-${it.pos}">
+  return `<div class="slot${deal}" id="card-${it.pos}"><div class="flip${down ? " down" : ""}">
+  <div class="card ${fb ? "fb-" + fb : ""}${r ? " r-" + r : ""}${bl.size ? " is-blocked" : ""}${S.shine === it.pos ? " just" : ""}">
     <a class="cover" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">
       <div class="ph">${esc(it.core_title)}</div>
       <img loading="lazy" src="${esc(it.cover)}" alt="" onerror="this.remove()">
       <span class="pos">${it.pos}</span><span class="route">${esc(it.reason.route_name || it.route)}</span>
+      ${r ? `<span class="rar">${RAR_NAME[r]}</span>` : ""}
     </a>
     <div class="body">
       <a class="title" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer" title="${esc(it.title)}">${esc(it.core_title)}</a>
       <div class="meta" title="${esc((it.authors || []).join("、"))}">${esc(it.source)} · ${esc((it.authors || []).join("、") || "作者未知")}${it.parodies?.length ? " · " + esc(it.parodies[0]) : ""}</div>
       <div class="reason">${esc(it.reason.text || "")}</div>
-      <div class="tags">${(it.tags || []).slice(0, 5).map(t => `<span class="tag">${esc(t)}</span>`).join("")}</div>
+      <div class="tags">${(it.tags || []).slice(0, 5).map(t => `<button class="tag${bl.has(t) || blockedHas(t) ? " bl" : ""}" data-tag="${esc(t)}" title="点一下可以拉黑这个标签">${esc(t)}</button>`).join("")}</div>
+      ${bl.size ? `<div class="blnote">已拉黑「${esc([...bl].join("、"))}」，以后不推这类</div>` : ""}
       <button class="why" onclick="why(${it.pos})">为何是它 →</button>
       <div class="acts">${btn("want")}${btn("skip")}${btn("dislike")}${btn("seen")}</div>${seenQ}
-    </div></div>`;
+    </div></div>
+  <button class="back" onclick="reveal(${it.pos})" aria-label="翻开第 ${it.pos} 本"><span class="bk-tap">点开</span><svg class="bk-star" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0C12.9 7.6 16.4 11.1 24 12 16.4 12.9 12.9 16.4 12 24 11.1 16.4 7.6 12.9 0 12 7.6 11.1 11.1 7.6 12 0Z"/></svg><span class="bk-no">No.${it.pos}</span><span class="bk-vol">VOL.${S.batch.vol ?? S.batch.id}</span></button>
+  </div></div>`;
 }
 
 async function feedback(pos, label, exact = false) {
@@ -526,7 +674,8 @@ async function feedback(pos, label, exact = false) {
   try {
     await api("/api/feedback", { method: "POST", body: JSON.stringify({ batch_id: S.batch.id, pos, label: next }) });
     it.feedback = next;
-    const y = window.scrollY; render(); window.scrollTo(0, y);
+    S.shine = (next === "want" || next === "seen_like") ? pos : null;
+    const y = window.scrollY; render(); window.scrollTo(0, y); S.shine = null;
     loadStatus();
     toast(next ? `记下了：${LABEL[next].replace("♥ ", "")}` : "已撤销");
   } catch (e) { toast(e.message); }
@@ -654,8 +803,15 @@ async function fillSettings() {
   $("semOn").checked = !!s.semantic?.enabled;
   $("proxy").value = s.proxy || ""; $("jmDomain").value = s.jm?.web_domain || ""; $("picaTpl").value = s.pica?.web_url_template || "";
   $("llmBase").value = s.llm?.base_url || ""; $("llmKey").value = s.llm?.api_key || ""; $("llmModel").value = s.llm?.model || "";
+  $("animOn").checked = s.card_anim !== false; renderBlocked();
   $("saveMsg").textContent = "";
 }
+$("animOn").onchange = async (e) => {
+  await api("/api/settings", { method: "POST", body: JSON.stringify({ card_anim: e.target.checked }) });
+  S.settings = { ...(S.settings || {}), card_anim: e.target.checked };
+  if (!e.target.checked && S.batch) { dealSet(S.batch.id, null); render(); }
+  toast(e.target.checked ? "抽卡动画已打开，下一卷生效" : "抽卡动画已关闭");
+};
 $("batchSize").oninput = (e) => $("batchSizeV").textContent = e.target.value;
 $("batchSize").onchange = async (e) => { await api("/api/settings", { method: "POST", body: JSON.stringify({ batch_size: +e.target.value }) }); toast("已保存"); };
 $("semOn").onchange = async (e) => {
@@ -692,7 +848,47 @@ async function login(site, uid, pid) {
 }
 async function logout(site) { await api("/api/logout/" + site, { method: "POST" }); await loadStatus(); if (!S.batch) render(); }
 async function doImport(site) { closeDrawer(); try { await runJob("/api/import/" + site); } catch (e) { toast(e.message); } }
-async function generate() { if (genDlg.open) genDlg.close(); try { await runJob("/api/batches", { mode: S.mode || "balance" }); } catch (e) { toast(e.message); } }
+async function generate() {
+  if (genDlg.open) genDlg.close();
+  const g = $("genBtn"); g.classList.remove("cast"); void g.offsetWidth; g.classList.add("cast");
+  if (animOn()) { $("deck").hidden = false; g.classList.add("busy"); }
+  try { await runJob("/api/batches", { mode: S.mode || "balance" }); } catch (e) { toast(e.message); $("deck").hidden = true; g.classList.remove("busy"); }
+}
+/* ---------- 拉黑标签 ---------- */
+function blockedHas(t) { return ((S.settings && S.settings.blocked_tags) || []).includes(t); }
+function closePop() { $("tagPop").hidden = true; }
+function tagPop(btn) {
+  const t = btn.dataset.tag, pop = $("tagPop"), on = blockedHas(t);
+  pop.innerHTML = on
+    ? `<div>「${esc(t)}」已经拉黑了。</div><div class="row"><button class="btn sm ghost" onclick="closePop()">算了</button><button class="btn sm" data-unblock="1">取消拉黑</button></div>`
+    : `<div>以后不推带「${esc(t)}」的作品？</div><div class="row"><button class="btn sm ghost" onclick="closePop()">算了</button><button class="btn sm y" data-block="1">拉黑</button></div>`;
+  pop.hidden = false;
+  const r = btn.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
+  pop.style.left = Math.max(8, Math.min(innerWidth - w - 8, r.left + r.width / 2 - w / 2)) + "px";
+  pop.style.top = (r.top - h - 8 > 8 ? r.top - h - 8 : r.bottom + 8) + "px";
+  pop.querySelector("[data-block],[data-unblock]").onclick = () => setBlocked(t, !on);
+}
+async function setBlocked(t, on) {
+  closePop();
+  try {
+    const r = await api("/api/tags/block", { method: "POST", body: JSON.stringify({ tag: t, blocked: on }) });
+    S.settings = { ...(S.settings || {}), blocked_tags: r.blocked_tags };
+    toast(on ? `已拉黑「${t}」，以后不推这类` : `已取消拉黑「${t}」`);
+    renderBlocked();
+    if (S.batch) { const y = window.scrollY; S.batch = await api("/api/batches/" + S.batch.id); render(); window.scrollTo(0, y); }
+  } catch (e) { toast(e.message); }
+}
+function renderBlocked() {
+  const L = (S.settings && S.settings.blocked_tags) || [];
+  $("blockedList").innerHTML = L.map(t => `<span>${esc(t)}<button data-tag="${esc(t)}" title="取消拉黑" onclick="setBlocked(this.dataset.tag, false)">×</button></span>`).join("");
+  $("blockedHint").textContent = L.length ? "点 × 取消拉黑。" : "点卡片上的标签就能拉黑，带这个标签的作品以后不再推荐。";
+}
+document.addEventListener("click", (e) => {
+  const tg = e.target.closest(".card .tag");
+  if (tg) { e.preventDefault(); return tagPop(tg); }
+  if (!e.target.closest("#tagPop")) closePop();
+});
+addEventListener("scroll", closePop, { passive: true });
 
 /* ---------- 开卷口味 ---------- */
 const MODES = [
@@ -766,9 +962,10 @@ document.addEventListener("click", (e) => {
 }, true);
 $("batchSel").onchange = (e) => e.target.value && loadBatch(e.target.value);
 $("setBtn").onclick = openDrawer;
-document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeDrawer(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") { closeDrawer(); closePop(); } });
 
 (async () => {
+  try { S.settings = await api("/api/settings"); } catch (e) {}
   await loadStatus();
   const m = location.hash.match(/batch=(\d+)/);
   await loadBatch(m ? m[1] : null);

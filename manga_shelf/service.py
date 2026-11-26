@@ -365,6 +365,15 @@ class Service:
         s = {**s, "llm": {**s.get("llm", {}), "api_key": "已填写" if s.get("llm", {}).get("api_key") else ""}}
         return s
 
+    def block_tag(self, tag: str, blocked: bool = True) -> list[str]:
+        """拉黑 / 取消拉黑一个标签。存原文，用的时候再归一，两站的同义说法一起算。"""
+        tag = (tag or "").strip()
+        cur = [t for t in load_settings().get("blocked_tags") or [] if t != tag]
+        if blocked and tag:
+            cur.append(tag)
+        save_settings({"blocked_tags": cur})
+        return cur
+
     def update_settings(self, patch: dict) -> dict:
         llm = patch.get("llm")
         if isinstance(llm, dict) and llm.get("api_key") == "已填写":

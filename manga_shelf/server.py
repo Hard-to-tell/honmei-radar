@@ -209,6 +209,10 @@ def create_app(service: Service | None = None) -> FastAPI:
         except Exception as e:
             raise HTTPException(400, f"分析失败：{e}")
 
+    @app.post("/api/tags/block")
+    def block_tag(body: dict = Body(...)):
+        return {"blocked_tags": svc.block_tag(str(body.get("tag", "")), bool(body.get("blocked", True)))}
+
     @app.get("/api/settings")
     def get_settings():
         return svc.settings()
