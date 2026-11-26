@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import hashlib
 import random
+import time
 from pathlib import Path
 
 import requests
@@ -14,6 +15,7 @@ from .service import Service
 from .sources import SiteError
 
 STATIC = Path(__file__).parent / "static"
+_COVER_FAILED: dict[str, float] = {}
 
 
 def create_app(service: Service | None = None) -> FastAPI:
@@ -23,10 +25,11 @@ def create_app(service: Service | None = None) -> FastAPI:
 
     @app.on_event("startup")
     def _auto_net_check():
-        # 启动时自动检测一次网络（6 小时内检测过就跳过），不用手动填代理
+        # 启动时在后台悄悄检测一次网络（6 小时内检测过就跳过），先让页面打开
         from .net import needs_check
         if needs_check() and not load_settings().get("demo"):
-            svc.start_net_check()
+            svc.start_net_check(quiet=True, delay=2)
+        svc.warm_up()
 
     @app.get("/", response_class=HTMLResponse)
     def index():
@@ -227,6 +230,9 @@ def create_app(service: Service | None = None) -> FastAPI:
         w = svc.db.get_work(site, wid)
         if not w or load_settings().get("demo"):
             raise HTTPException(404)
+        # 最近取失败过的先不再试，免得每次打开页面都卡在等封面上
+        if time.time() - _COVER_FAILED.get(safe, 0) < 1800:
+            raise HTTPException(404, "封面获取失败")
         urls = [w.cover] if w.cover else []
         if site == "jm":
             try:
@@ -245,13 +251,14 @@ def create_app(service: Service | None = None) -> FastAPI:
                                  "(KHTML, like Gecko) Chrome/124.0 Safari/537.36"}
         for u in dict.fromkeys(urls):
             try:
-                r = requests.get(u, headers=headers, timeout=12, proxies=proxies())
+                r = requests.get(u, headers=headers, timeout=(4, 8), proxies=proxies())
                 if r.ok and r.content and r.headers.get("content-type", "").startswith("image"):
                     f.write_bytes(r.content)
                     return Response(r.content, media_type=r.headers["content-type"],
                                     headers={"Cache-Control": "max-age=604800"})
             except requests.RequestException:
                 continue
+        _COVER_FAILED[safe] = time.time()
         raise HTTPException(404, "封面获取失败")
 
     return app

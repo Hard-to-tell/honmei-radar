@@ -110,14 +110,21 @@ def _aliases() -> dict[str, str]:
 
 def reset_aliases() -> None:
     _aliases.cache_clear()
+    norm_tag.cache_clear()
 
 
+@lru_cache(maxsize=1)
+def _meta_keys() -> frozenset[str]:
+    return frozenset(norm(m) for m in META_TAGS)
+
+
+@lru_cache(maxsize=100000)
 def norm_tag(t: str) -> str | None:
     k = norm(t)
     if not k:
         return None
     k = _aliases().get(k, to_simplified(t).strip().lower())
-    if norm(k) in {norm(m) for m in META_TAGS}:
+    if norm(k) in _meta_keys():
         return None
     return k
 

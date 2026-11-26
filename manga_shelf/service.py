@@ -44,9 +44,9 @@ class Jobs:
         self.jobs: dict[str, dict] = {}
         self.lock = threading.Lock()
 
-    def start(self, kind: str, title: str, fn) -> str:
+    def start(self, kind: str, title: str, fn, quiet: bool = False) -> str:
         jid = uuid.uuid4().hex[:10]
-        job = {"id": jid, "kind": kind, "title": title, "status": "running", "progress": "准备中…",
+        job = {"id": jid, "kind": kind, "title": title, "status": "running", "progress": "准备中…", "quiet": quiet,
                "done": None, "total": None, "result": None, "error": None,
                "started_at": time.time(), "phase_started_at": time.time(), "finished_at": None}
         with self.lock:
@@ -90,6 +90,8 @@ class Jobs:
         out = []
         for j in self.jobs.values():
             age = now - (j["finished_at"] or now)
+            if j.get("quiet") and j["status"] != "error":
+                continue   # 后台自动做的事（启动时的网络检测）不打扰
             if j["status"] == "running" or (j["status"] == "done" and age < 8) or \
                     (j["status"] == "error" and age < 600):
                 out.append(j)
@@ -265,13 +267,30 @@ class Service:
         return self.jobs.start(f"analyze-{batch_id}-{pos}", f"细读 Vol.{batch_id} · No.{pos}", run)
 
     # ---- 网络与组件 ----
-    def start_net_check(self) -> str:
+    def start_net_check(self, quiet: bool = False, delay: float = 0) -> str:
         def run(p):
+            if delay:
+                time.sleep(delay)
             p("检测网络：直连、系统代理、本地代理端口…")
             res = net.detect()
             self.reset_adapters()
             return res
-        return self.jobs.start("net", "检测网络", run)
+        return self.jobs.start("net", "检测网络", run, quiet=quiet)
+
+    def warm_up(self, delay: float = 4) -> None:
+        """启动后在后台预先算一遍口味（载入算法库、填好缓存），第一次点调音 / 报告 / 开卷会快很多。"""
+        def run():
+            time.sleep(delay)
+            t = time.time()
+            try:
+                from .recommend import build_profile, build_taste
+                prof = build_profile(self.db)
+                if not prof.empty:
+                    build_taste(self.db, prof)
+                log.info("预热完成 %.1fs", time.time() - t)
+            except Exception as e:
+                log.warning("预热失败：%s", e)
+        threading.Thread(target=run, daemon=True).start()
 
     def semantic_installed(self) -> bool:
         import importlib.util

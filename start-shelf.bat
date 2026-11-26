@@ -27,6 +27,8 @@ if errorlevel 1 (
 
 :run
 ".venv\Scripts\python.exe" -m manga_shelf serve --open
+rem exit code 3 = already running, page was opened
+if "%errorlevel%"=="3" exit /b 0
 pause
 exit /b 0
 

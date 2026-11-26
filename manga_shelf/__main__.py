@@ -16,7 +16,58 @@ import threading
 import webbrowser
 
 
+def _probe(port: int) -> str:
+    """看这个端口上是什么：'honmei'（书架已经开着）、'other'（被别的程序占了）、'free'。"""
+    import json
+    import socket
+    import urllib.request
+    try:
+        with socket.create_connection(("127.0.0.1", port), timeout=0.3):
+            pass
+    except OSError:
+        return "free"
+    try:
+        op = urllib.request.build_opener(urllib.request.ProxyHandler({}))
+        d = json.loads(op.open(f"http://127.0.0.1:{port}/api/status", timeout=3).read())
+        return "honmei" if "sites" in d else "other"
+    except Exception:
+        return "other"
+
+
+def _open_when_ready(url: str, port: int, t0: float) -> None:
+    """等服务真的能连上了再开浏览器（慢电脑上固定等 1 秒常常不够）。"""
+    import socket
+    import time
+    deadline = time.time() + 120
+    while time.time() < deadline:
+        try:
+            with socket.create_connection(("127.0.0.1", port), timeout=0.3):
+                break
+        except OSError:
+            time.sleep(0.2)
+    import logging
+    logging.getLogger("honmei").info("启动用时 %.1fs", time.time() - t0)
+    print(f"已就绪（{time.time() - t0:.1f} 秒）")
+    webbrowser.open(url)
+
+
 def _serve(port: int, open_browser: bool) -> None:
+    import time
+    t0 = time.time()
+    print("本命 HONMEI 正在启动……")
+    # 已经开着就直接打开页面，不重复启动；端口被别的程序占了就换一个
+    for p in range(port, port + 10):
+        state = _probe(p)
+        if state == "honmei":
+            url = f"http://127.0.0.1:{p}/"
+            print(f"书架已经开着了：{url}")
+            if open_browser:
+                webbrowser.open(url)
+            sys.exit(3)   # 启动脚本看到 3 就直接关窗口
+        if state == "free":
+            port = p
+            break
+
     import uvicorn
 
     from .server import create_app
@@ -24,10 +75,10 @@ def _serve(port: int, open_browser: bool) -> None:
     app = create_app()
     url = f"http://127.0.0.1:{port}/"
     from .config import data_dir
-    print(f"本命 HONMEI 已启动：{url}")
+    print(f"地址：{url}")
     print(f"数据目录：{data_dir()}  （关闭这个窗口即可退出）")
     if open_browser:
-        threading.Timer(1.2, lambda: webbrowser.open(url)).start()
+        threading.Thread(target=_open_when_ready, args=(url, port, t0), daemon=True).start()
     uvicorn.run(app, host="127.0.0.1", port=port, log_level="warning")
 
 
