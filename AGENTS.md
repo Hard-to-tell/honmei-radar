@@ -34,7 +34,7 @@
 ## 代码地图
 
 - `manga_shelf/sources/`：站点适配器（`jm.py`、`pica.py`、演示 `demo.py`）· `net.py` 网络自动检测（代理、备用线路）
-- `normalize.py` 标题拆解、标签归一、版本去重 · `taste.py` 口味模型（提升度、口味簇、基准样本、跨站标签对照）
+- `normalize.py` 标题拆解、标签归一、版本去重 · `taste.py` 口味模型（提升度、基准样本、跨站标签对照）· `themes.py` 口味主题（NMF 软分组）
 - `features.py` 候选特征 · `ranker.py` 个人排序 · `recommend.py` 检索与组卷（开卷口味模式） · `calibrate.py` 调音 · `evaluate.py` 检验
 - `insights.py` / `portrait.py` 本命报告与侧写 · `analyzer.py` 可选 AI 解读（Codex / Claude Code / OpenAI 兼容 API）
 - `server.py` FastAPI · `static/` 前端（`index.html` 书架，`report.html` 报告）

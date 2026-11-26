@@ -15,6 +15,8 @@ import random
 import time
 from collections import Counter
 
+import numpy as np
+
 from .config import load_settings
 from .db import DB
 from dataclasses import replace
@@ -178,13 +180,31 @@ def _exclusion(db: DB) -> tuple[set[str], set[str], set[tuple[str, str]]]:
     return jm_ids, keys, blocked
 
 
-# 开卷前选的“这一卷想要什么”。只是在固定打分上加减一点，再改改名额，不碰学到的口味
+# 开卷前选的“这一卷想要什么”。只是在固定打分上加减一点，再调调“不重样”的力度，不碰学到的口味
+# div：挑一卷时，跟已经挑中的越像扣得越多（0 = 只看分数，越大越不重样）
+DIV_DEFAULT = 0.2
 MODES = {
     "balance": {"name": "平衡"},
-    "safe":    {"name": "稳妥", "author": 0.15, "fit": 0.10, "explore": 0.5, "power": 0.8, "per_author": 3},
-    "fresh":   {"name": "尝鲜", "author": -0.22, "explore": 2.0, "power": 0.3, "per_author": 1, "new_author": 0.08},
+    "safe":    {"name": "稳妥", "author": 0.15, "fit": 0.10, "explore": 0.5, "div": 0.0, "per_author": 3},
+    "fresh":   {"name": "尝鲜", "author": -0.22, "explore": 2.0, "div": 0.5, "per_author": 1, "new_author": 0.08},
     "niche":   {"name": "冷门", "pop": -0.30, "explore": 1.0, "hot": False},
 }
+
+
+def _similarity(cands: list[Work]) -> np.ndarray:
+    """候选两两之间有多像（标签 + 原作，0~1）。格式标签不算。"""
+    from .themes import FORMAT_TAGS
+    docs = [" ".join(t.replace(" ", "_") for t in work_tokens(w) if t not in FORMAT_TAGS) for w in cands]
+    if not any(docs):
+        return np.zeros((len(cands), len(cands)))
+    from sklearn.feature_extraction.text import TfidfVectorizer
+    try:
+        X = TfidfVectorizer(token_pattern=r"[^ ]+", sublinear_tf=True).fit_transform(docs)
+    except ValueError:
+        return np.zeros((len(cands), len(cands)))
+    S = (X @ X.T).toarray()
+    np.fill_diagonal(S, 0.0)
+    return S
 
 
 def _quotas(main_k: int, cinfo: list[dict], rnd: random.Random, power: float = 0.5) -> dict[int, int]:
@@ -202,9 +222,13 @@ def _quotas(main_k: int, cinfo: list[dict], rnd: random.Random, power: float = 0
 
 def _pick(cands: list[Work], scores: list[float], routes: list[str], k: int, explore_k: int,
           max_per_author: int, rnd: random.Random, clusters: list[int] | None = None,
-          cinfo: list[dict] | None = None, power: float = 0.5, hot_k: int = 1) -> list[int]:
-    """选出一卷：主体按分数取，但每个口味簇有名额；探索名额按簇的不确定程度抽（反馈越少、
-    好坏越混杂的簇越常被试探），另留一本站内热门。"""
+          cinfo: list[dict] | None = None, power: float = 0.5, hot_k: int = 1,
+          div: float | None = None) -> list[int]:
+    """选出一卷。主体有两种挑法：
+      div 为 None（旧版）：按分数取，每个口味簇有名额；
+      div 为数值（新版 MMR）：一本一本挑，每次挑“分数高、又和已经挑中的不像”的那本；
+        也先守口味名额（调音的权重、静音都照旧），名额内再挑不重样的。
+    之后探索名额按口味的不确定程度抽（反馈越少、好坏越混杂越常被试探），另留一本站内热门。"""
     order = sorted(range(len(cands)), key=lambda i: -scores[i])
     chosen, per_author, per_parody, per_cluster = [], Counter(), Counter(), Counter()
     seen_keys: set[str] = set()
@@ -238,20 +262,45 @@ def _pick(cands: list[Work], scores: list[float], routes: list[str], k: int, exp
             per_parody[norm(p)] += 1
         per_cluster[clusters[i]] += 1
 
-    # 1) 主体：遵守口味簇名额
-    for i in order:
-        if len(chosen) >= main_k:
-            break
-        c = clusters[i]
-        if c in quota and per_cluster[c] >= quota[c]:
-            continue
-        if ok(i):
-            take(i)
-    for i in order:   # 名额没用完的簇，空位按分数补
-        if len(chosen) >= main_k:
-            break
-        if i not in chosen and ok(i):
-            take(i)
+    if div is not None:
+        # 1) 主体（MMR）：先守口味名额（每种味道都照顾到），名额内一本一本挑
+        #    “分数高、又和已经挑中的不像”的；名额用完后不再限口味，照样这么挑
+        s = np.asarray(scores, dtype=float)
+        span = s.max() - s.min() if len(s) else 0.0
+        rel = (s - s.min()) / span if span > 0 else np.zeros(len(s))
+        sim = _similarity(cands)
+        maxsim = np.zeros(len(cands))
+        for use_quota in ((True, False) if quota else (False,)):
+            while len(chosen) < main_k:
+                best, best_v = None, -1e9
+                for i in order:
+                    if i in chosen or not ok(i):
+                        continue
+                    c = clusters[i]
+                    if use_quota and c in quota and per_cluster[c] >= quota[c]:
+                        continue
+                    v = (1 - div) * rel[i] - div * maxsim[i]
+                    if v > best_v:
+                        best, best_v = i, v
+                if best is None:
+                    break
+                take(best)
+                maxsim = np.maximum(maxsim, sim[best])
+    else:
+        # 1) 主体：遵守口味簇名额
+        for i in order:
+            if len(chosen) >= main_k:
+                break
+            c = clusters[i]
+            if c in quota and per_cluster[c] >= quota[c]:
+                continue
+            if ok(i):
+                take(i)
+        for i in order:   # 名额没用完的簇，空位按分数补
+            if len(chosen) >= main_k:
+                break
+            if i not in chosen and ok(i):
+                take(i)
     # 2) 一本站内热门（偶遇）
     hot = [i for i in order if routes[i] == "explore" and i not in chosen]
     rnd.shuffle(hot)
@@ -274,6 +323,11 @@ def _pick(cands: list[Work], scores: list[float], routes: list[str], k: int, exp
             break
         if i not in chosen and ok(i):
             take(i)
+    for i in order:  # 还不够：放宽“同一作者 / 同一原作”的限制，只保证不是同一本的不同版本
+        if len(chosen) >= k:
+            break
+        if i not in chosen and not (ckeys[i] & seen_keys):
+            take(i)
     return chosen
 
 
@@ -293,6 +347,33 @@ def reason_text(reason: dict, route: str) -> str:
     if not parts:
         parts.append(f"循着“{ROUTE_NAMES.get(route, route)}”找到")
     return "；".join(parts)
+
+
+def _head(pool: list[tuple[Work, str]], order: list[int], n: int, per_author: int) -> list[tuple[Work, str]]:
+    """挑出要细读的候选：按初筛分数取，但同一作者最多 per_author 本，
+    “熟悉作者”这条路最多占一半，免得整卷都是老作者的其他作品。不够再按分数补。"""
+    head, used, by_author = [], set(), Counter()
+    author_cap = n // 2
+    for i in order:
+        if len(head) >= n:
+            break
+        w, route = pool[i]
+        who = ([p for p, _, _ in work_people(w)][:1] or [""])[0]
+        if who and by_author[who] >= per_author:
+            continue
+        if route == "author" and sum(1 for _, r in head if r == "author") >= author_cap:
+            continue
+        head.append(pool[i])
+        used.add(i)
+        if who:
+            by_author[who] += 1
+    for i in order:
+        if len(head) >= n:
+            break
+        if i not in used:
+            head.append(pool[i])
+            used.add(i)
+    return head
 
 
 def generate_batch(db: DB, jm: SiteAdapter, progress: Progress | None = None, seed: int | None = None,
@@ -349,10 +430,10 @@ def generate_batch(db: DB, jm: SiteAdapter, progress: Progress | None = None, se
     background = [w for w, _ in pool]
     fb = FeatureBuilder(profile, background, None, taste=taste, hints=hints)
     rows, _ = fb.build(background)
-    pre = [0.25 * r["tag"] + 0.3 * r["fit"] + 0.3 * r["author"] + 0.15 * r["title"] for r in rows]
+    a_w = max(0.0, 0.3 + mc.get("author", 0))       # 尝鲜模式初筛就少看作者
+    pre = [0.25 * r["tag"] + 0.3 * r["fit"] + a_w * r["author"] + 0.15 * r["title"] for r in rows]
     order = sorted(range(len(pool)), key=lambda i: -pre[i])
-    n_detail = min(len(pool), k * 4)
-    head = [pool[i] for i in order[:n_detail]]
+    head = _head(pool, order, min(len(pool), k * 5), per_author=max(2, mc.get("per_author", 2) + 1))
     explore_extra = [p for p in pool if p[1] in ("explore", "cold") and p not in head][: max(4, k // 4)]
     head += explore_extra
 
@@ -395,7 +476,7 @@ def generate_batch(db: DB, jm: SiteAdapter, progress: Progress | None = None, se
     cinfo = taste.clusters if taste is not None else None
     per_author = mc.get("per_author", int(settings.get("max_per_author", 2)))
     chosen = _pick(cands, scores, routes, k, explore_k, per_author, rnd, cl, cinfo,
-                   power=mc.get("power", 0.5), hot_k=1 if mc.get("hot", True) else 0)
+                   hot_k=1 if mc.get("hot", True) else 0, div=mc.get("div", DIV_DEFAULT))
 
     items = []
     for i in chosen:

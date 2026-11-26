@@ -20,7 +20,7 @@ from dataclasses import dataclass, field
 import numpy as np
 
 from .models import Work
-from .normalize import norm, norm_parody, norm_person, norm_tags, parse_title
+from .normalize import norm, norm_parody, norm_person, norm_tags, parse_title, title_tags
 
 FEATURES = ["tag", "fit", "author", "title", "semantic", "neg", "pop"]
 TVERSKY_A = 0.5    # 候选有、收藏没有的标签，罚得重一些
@@ -31,6 +31,7 @@ CROSS_SITE = True  # 跨站比较（哔咔收藏 vs 禁漫候选）只看两站�
 
 def work_tokens(w: Work) -> list[str]:
     toks = norm_tags(w.tags)
+    toks += [t for t in title_tags(w.title) if t not in toks]     # 标题里的设定词，补上漏标的标签
     toks += ["原作:" + norm(norm_parody(p)) for p in w.parodies if norm(p)]
     return toks
 

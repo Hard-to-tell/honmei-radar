@@ -131,8 +131,8 @@ def main(argv: list[str] | None = None) -> None:
         r = evaluate(svc.db, svc.adapter("jm"), lambda msg, *a: print(msg))
         print(r["summary"])
         for k, v in r["variants"].items():
-            print(f"  {v['name']}: 一卷 {r['top']} 本命中 {v['hits']}，命中平均名次 {v['hit_rank']}，"
-                  f"答案平均名次百分位 {v['pos_pct']}，AUC {v['auc']}，哔咔近邻 {v['pica_near']}，覆盖簇 {v['clusters']}")
+            print(f"  {v['name']}: 一卷 {r['top']} 本命中 {v['hits']}（只混随机作品 {v.get('hits_rand')}），命中平均名次 {v['hit_rank']}，"
+                  f"答案平均名次百分位 {v['pos_pct']}，AUC {v['auc']}，哔咔近邻 {v['pica_near']}，覆盖口味 {v['clusters']}，不重样 {v.get('variety')}")
         return
     if args.cmd == "mcp":
         from .mcp_server import main as mcp_main

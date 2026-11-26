@@ -3,6 +3,7 @@ import sys
 import tempfile
 from pathlib import Path
 
+import numpy as np
 import pytest
 
 _HOME = tempfile.mkdtemp(prefix="manga-shelf-test-")
@@ -212,7 +213,7 @@ def test_v03_calibration_and_eval(svc):
     assert len(svc.batch(bid)["items"]) == 12
     try:
         out = evaluate(svc.db, svc.adapter("jm"))
-        assert set(out["variants"]) == {"v0.2", "v0.3"} and out["summary"]
+        assert set(out["variants"]) == {"v0.3", "v0.4"} and out["summary"]
     except EvalError:
         pass
 
@@ -320,3 +321,40 @@ def test_pica_pin_and_jm_web_domain():
     assert net.jm_web_domain(s) == "mirror.example"
     s["jm"]["web_domain"] = "mine.example"          # 手动填的优先
     assert net.jm_web_domain(s) == "mine.example"
+
+
+def test_title_hints_and_themes():
+    import random
+
+    from manga_shelf.models import Work
+    from manga_shelf.normalize import title_tags
+    from manga_shelf.recommend import _pick
+    from manga_shelf.themes import Themes
+
+    assert "催眠" in title_tags("[某社团] 催眠アプリで生意気な後輩を")
+    assert "女仆" in title_tags("我家的女仆小姐")
+    assert not title_tags("[作者] 平凡的日常")
+
+    rnd = random.Random(3)
+    pools = [["纯爱", "校服", "青梅竹马"], ["ntr", "人妻", "熟女"], ["触手", "怪物", "异种奸"], ["姐姐", "后宫", "巨乳"]]
+    works = []
+    for i in range(120):
+        tags = rnd.sample(pools[i % 4], 2) + ["长篇" if i % 2 else "短篇"] + rnd.sample(["中出", "口交", "黑丝"], 1)
+        works.append(Work(site="jm" if i % 3 else "pica", wid=str(i), title=f"t{i}", tags=tags, detail_ok=True))
+    a, b = Themes(works), Themes(works)
+    assert [c["tags"] for c in a.clusters] == [c["tags"] for c in b.clusters]          # 结果确定
+    assert len(a.clusters) >= 3
+    assert all(t not in ("长篇", "短篇") for c in a.clusters for t in c["tags"])        # 格式标签不分味道
+    mix = a.mixture(works[:5])
+    assert np.allclose(mix.sum(axis=1), 1.0)
+
+    # MMR：分数一样时，div 越大，一卷越不重样
+    cands = works[:40]
+    scores = [1.0 - i * 0.001 for i in range(40)]
+    from manga_shelf.recommend import _similarity
+    sim = _similarity(cands)
+
+    def variety(div):
+        pick = _pick(cands, scores, ["x"] * 40, 8, 0, 9, random.Random(0), div=div)
+        return 1 - np.mean([sim[x, y] for x in pick for y in pick if x < y])
+    assert variety(0.6) > variety(0.0)

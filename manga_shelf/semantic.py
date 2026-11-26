@@ -27,8 +27,7 @@ def work_text(w: Work) -> str:
         parts.append("原作：" + "、".join(w.parodies))
     if w.tags:
         parts.append("标签：" + "、".join(w.tags[:15]))
-    if w.description:
-        parts.append(w.description[:200])
+    # 简介不用：两站的简介大多是乱写的，只会把向量带偏
     return to_simplified("。".join(parts))
 
 

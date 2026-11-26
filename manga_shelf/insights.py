@@ -211,13 +211,14 @@ def summary(db: DB) -> dict:
     rising = [d for d in drift if d["delta"] > 0.03][:6]
     falling = [d for d in sorted(drift, key=lambda d: d["delta"]) if d["delta"] < -0.03][:6]
 
-    res = _clusters(tag_sets, return_model=True)
-    clusters, dist = [], None
-    if res:
-        clusters, vec, km = res
-        docs = [" ".join(t.replace(" ", "_") for t in ts) for ts in tag_sets]
-        dist = km.transform(vec.transform(docs))       # 每本收藏到每个簇中心的距离
-    for c in clusters:
+    # 口味分组：NMF 软主题（和推荐用的是同一套，见 themes.py）
+    from .taste import background_works
+    from .themes import Themes
+    fav_works = [w for w, _ in favs]
+    th = Themes(fav_works, background_works(db), exclude=set(hidden))
+    clusters = [dict(c) for c in th.clusters]
+    dist = (1.0 - th.fav_mix) if clusters else None       # 每本收藏离每种口味的远近
+    for ci, c in enumerate(clusters):
         mem = c.pop("members")
         ac = Counter()
         for i in mem:
@@ -228,7 +229,7 @@ def summary(db: DB) -> dict:
         c["authors"] = [author_name[k] for k, _ in ac.most_common(3)]
         c["name"] = "·".join(c["tags"][:2])
         # 代表作：离簇中心最近的几本
-        rep_idx = sorted(mem, key=lambda i: dist[i, c["label"]])[:4] if dist is not None else mem[:4]
+        rep_idx = sorted(mem, key=lambda i: dist[i, ci])[:4] if dist is not None else mem[:4]
         c["works"] = [_brief(favs[i][0]) for i in rep_idx]
         # 这一簇独有的味道：簇内比例 ÷ 全部收藏比例 最高的标签
         inside = Counter(t for i in mem for t in set(tag_sets[i]))
@@ -240,7 +241,7 @@ def summary(db: DB) -> dict:
     # 孤例：离所有口味簇都远、又带着你收藏里很少见的标签的那几本
     outliers = []
     if dist is not None and n >= 40:
-        nearest = dist.min(axis=1)
+        nearest = th.outlier_score(fav_works)          # 这几种口味解释不了它的程度
         rarity = []
         for i, ts in enumerate(tag_sets):
             rare = [t for t in ts if tag_count[t] <= 3 and not re.match(r"^(c\d{2,3}|comic.*|\d+.*)$", t)]

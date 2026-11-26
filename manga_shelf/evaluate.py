@@ -1,4 +1,6 @@
-"""检验算法：v0.2 和 v0.3 谁更懂你。
+"""检验算法：v0.3（旧）和 v0.4（新）谁更懂你。
+
+v0.4 = 标题设定词补标签 + 两站标签对齐 + NMF 软口味 + MMR 组卷；v0.3 = K-means 硬分组 + 按簇名额。
 
 做法（时间切分，模拟“用过去猜未来”）：
   - 藏起最新 20% 的禁漫收藏当“答案”；最新 20% 的哔咔收藏里，能按标题在禁漫找到同一本的也算答案；
@@ -28,7 +30,7 @@ HOLDOUT = 0.2
 REPEATS = 3
 TOP = 20
 
-VARIANTS = {"v0.2": "v0.2（当前版本）", "v0.3": "v0.3（新算法）"}
+VARIANTS = {"v0.3": "v0.3（旧版）", "v0.4": "v0.4（新算法）"}
 
 
 class EvalError(Exception):
@@ -46,10 +48,15 @@ def _without_learned_aliases(fn):
         normalize.reset_aliases()
 
 
-def _slate(cands, scores, k, clusters=None, cinfo=None, seed=0):
+def _slate(cands, scores, k, clusters=None, cinfo=None, seed=0, div=None):
     from .recommend import _pick
     rnd = random.Random(seed)
-    return _pick(cands, list(scores), ["eval"] * len(cands), k, 0, 2, rnd, clusters, cinfo)
+    return _pick(cands, list(scores), ["eval"] * len(cands), k, 0, 2, rnd, clusters, cinfo, div=div)
+
+
+def _title_hints(on: bool) -> None:
+    normalize.USE_TITLE_HINTS = on
+    normalize.title_tags.cache_clear()
 
 
 def evaluate(db: DB, jm=None, progress=None, seed: int = 7) -> dict:
@@ -120,29 +127,42 @@ def evaluate(db: DB, jm=None, progress=None, seed: int = 7) -> dict:
         cands: list[Work] = positives + negs
         y = np.array([1] * len(positives) + [0] * len(negs))
 
+        from .recommend import DIV_DEFAULT, _similarity
+        # 旧版：不看标题设定词、K-means 硬分组、按簇名额
+        _title_hints(False)
+        try:
+            t3 = TasteModel(profile.favorites, profile.fav_weights, ref, [], clusters=True, cluster_algo="kmeans")
+            cl3 = t3.cluster_of(cands)
+            f3, r3 = FeatureBuilder(profile, ref, None, taste=t3).build(cands)
+        finally:
+            _title_hints(True)
+        s3 = [base_score(x, False, BASE_WEIGHTS) for x in f3]
+        # 新版
         taste = TasteModel(profile.favorites, profile.fav_weights, ref, [], clusters=True)
         cl = taste.cluster_of(cands)
+        f4, r4 = FeatureBuilder(profile, ref, None, taste=taste).build(cands)
+        s4 = [base_score(x, False, BASE_WEIGHTS) for x in f4]
+        sim = _similarity(cands)          # 同一把尺子量“一卷有多不重样”
 
-        def v02():
-            f, r = FeatureBuilder(profile, ref, None, mode="v1").build(cands)
-            return [base_score(x, False, V1_WEIGHTS) for x in f], r
-        s2, r2 = _without_learned_aliases(v02)
-        f3, r3 = FeatureBuilder(profile, ref, None, taste=taste).build(cands)
-        s3 = [base_score(x, False, BASE_WEIGHTS) for x in f3]
-
-        for name, scores, reasons, quota in (("v0.2", s2, r2, False), ("v0.3", s3, r3, True)):
-            pick = _slate(cands, scores, TOP, cl if quota else None, taste.clusters if quota else None, rep)
+        for name, scores, reasons, cls, cinfo, div in (("v0.3", s3, r3, cl3, t3.clusters, None),
+                                                      ("v0.4", s4, r4, cl, taste.clusters, DIV_DEFAULT)):
+            pick = _slate(cands, scores, TOP, cls, cinfo, rep, div)
+            # 另比一次只混随机作品（不混检索出来的同作者 / 同标签作品）的，难度低一些、更看排序本身
+            sub = list(range(len(positives))) + list(range(len(positives), len(positives) + len(sample) - half))
+            pick_r = _slate([cands[i] for i in sub], [scores[i] for i in sub], TOP, [cls[i] for i in sub], cinfo, rep, div)
             hits = [p for p in pick if y[p] == 1]
             near = [reasons[p]["nearest"][0]["site"] for p in pick if reasons[p].get("nearest")]
             order = np.argsort(-np.array(scores), kind="stable")
             rank_of = {int(i): r for r, i in enumerate(order)}
             runs[name].append({
                 "hits": len(hits),
+                "hits_rand": sum(1 for p in pick_r if y[sub[p]] == 1),
                 "hit_rank": float(np.mean([pick.index(p) + 1 for p in hits])) if hits else None,
                 "pos_pct": float(np.mean([rank_of[i] / max(1, len(cands) - 1) for i in range(len(positives))])),
                 "auc": _auc(y, np.array(scores)),
                 "pica_near": (near.count("pica") / len(near)) if near else 0.0,
-                "clusters": len({cl[p] for p in pick if cl[p] >= 0}),
+                "clusters": len({cl[p] for p in pick if cl[p] >= 0}),   # 都按新版的口味分组来数
+                "variety": float(1 - np.mean([sim[a, b] for a in pick for b in pick if a < b])) if len(pick) > 1 else 0.0,
             })
 
     def avg(rs, k):
@@ -154,11 +174,13 @@ def evaluate(db: DB, jm=None, progress=None, seed: int = 7) -> dict:
            "n_clusters": len(taste.clusters), "variants": {}}
     for k, rs in runs.items():
         out["variants"][k] = {"name": VARIANTS[k], **{m: avg(rs, m) for m in
-                              ("hits", "hit_rank", "pos_pct", "auc", "pica_near", "clusters")}}
-    a, b = out["variants"]["v0.2"], out["variants"]["v0.3"]
+                              ("hits", "hits_rand", "hit_rank", "pos_pct", "auc", "pica_near", "clusters", "variety")}}
+    a, b = out["variants"]["v0.3"], out["variants"]["v0.4"]
     out["summary"] = (f"{len(positives)} 本藏起来的新收藏混进 {len(negs)} 本没收藏、也没表过态的作品里，各挑一卷 {TOP} 本："
-                      f"v0.3 命中 {b['hits']:.1f} 本（v0.2 {a['hits']:.1f}）；"
-                      f"最接近的收藏来自哔咔 {b['pica_near']:.0%}（v0.2 {a['pica_near']:.0%}，你的收藏里哔咔占 {pica_share:.0%}）；"
-                      f"一卷覆盖 {b['clusters']:.1f} 个口味簇（v0.2 {a['clusters']:.1f}，共 {len(taste.clusters)} 个）。")
+                      f"v0.4 命中 {b['hits']:.1f} 本（v0.3 {a['hits']:.1f}）；"
+                      f"只混随机作品时命中 {b['hits_rand']:.1f} 本（v0.3 {a['hits_rand']:.1f}）；"
+                      f"最接近的收藏来自哔咔 {b['pica_near']:.0%}（v0.3 {a['pica_near']:.0%}，你的收藏里哔咔占 {pica_share:.0%}）；"
+                      f"一卷覆盖 {b['clusters']:.1f} 种口味（v0.3 {a['clusters']:.1f}，共 {len(taste.clusters)} 种），"
+                      f"不重样程度 {b['variety']:.2f}（v0.3 {a['variety']:.2f}）。")
     db.kv_set("eval", out)
     return out

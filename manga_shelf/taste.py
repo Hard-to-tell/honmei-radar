@@ -143,7 +143,7 @@ def _sigmoid(x: float) -> float:
 class TasteModel:
     def __init__(self, favorites: list[Work], fav_weights, background: list[Work],
                  feedback: list[tuple[Work, str]] | None = None, clusters: bool = True,
-                 calibration: dict | None = None):
+                 calibration: dict | None = None, cluster_algo: str = "nmf"):
         self.favorites = favorites
         self.calibration = calibration or {}
         w = np.asarray(fav_weights, dtype=float) if len(favorites) else np.zeros(0)
@@ -223,10 +223,13 @@ class TasteModel:
 
         self.feedback = feedback or []
         self.clusters: list[dict] = []
+        self._themes = None
         self._km = None
-        self._vec = None
-        if clusters:
-            self._fit_clusters(fav_tokens)
+        if clusters and cluster_algo == "kmeans":     # 旧版（K-means 硬分组），只留着做对比评测
+            self._fit_kmeans(fav_tokens)
+            self._cluster_signals()
+        elif clusters:
+            self._fit_clusters()
             self._cluster_signals()
 
     # ---- 单本打分 ----
@@ -246,24 +249,38 @@ class TasteModel:
         return sorted(toks, key=lambda t: -self.pref[t])[:n]
 
     # ---- 口味簇 ----
-    def _fit_clusters(self, fav_tokens: list[set[str]]) -> None:
+    def _fit_clusters(self) -> None:
+        """口味分组：NMF 软主题（见 themes.py）。基准样本只用来判断“两站都用的标签”。"""
+        from .themes import Themes
+        th = Themes(self.favorites, self.background)
+        if th.clusters:
+            self._themes = th
+            self.clusters = th.clusters
+
+    def _fit_kmeans(self, fav_tokens: list[set[str]]) -> None:
         from .insights import _clusters
         lists = [sorted(t for t in toks if not t.startswith("原作:")) for toks in fav_tokens]
         res = _clusters(lists, return_model=True)
-        if not res:
-            return
-        clusters, vec, km = res
-        self.clusters, self._vec, self._km = clusters, vec, km
+        if res:
+            self.clusters, self._vec, self._km = res
 
     def cluster_of(self, works: list[Work]) -> list[int]:
-        if self._km is None or not works:
+        if self._km is not None and works:
+            docs = [" ".join(t.replace(" ", "_") for t in work_tokens(w) if not t.startswith("原作:")) for w in works]
+            X = self._vec.transform(docs)
+            labels = self._km.predict(X)
+            order = {c["label"]: i for i, c in enumerate(self.clusters)}
+            empty = np.asarray(X.sum(axis=1)).ravel() == 0
+            return [-1 if empty[i] else order.get(int(labels[i]), -1) for i in range(len(works))]
+        if self._themes is None or not works:
             return [-1] * len(works)
-        docs = [" ".join(t.replace(" ", "_") for t in work_tokens(w) if not t.startswith("原作:")) for w in works]
-        X = self._vec.transform(docs)
-        labels = self._km.predict(X)
-        order = {c["label"]: i for i, c in enumerate(self.clusters)}
-        empty = np.asarray(X.sum(axis=1)).ravel() == 0
-        return [-1 if empty[i] else order.get(int(labels[i]), -1) for i in range(len(works))]
+        return self._themes.assign(works)
+
+    def cluster_mix(self, works: list[Work]) -> np.ndarray | None:
+        """每本书在各个口味上的占比（软归属）。"""
+        if self._themes is None or not works:
+            return None
+        return self._themes.mixture(works)
 
     def _cluster_signals(self) -> None:
         """每簇汇总调音评分和心动/略过：权重、是否静音、不确定程度、看重什么。"""
@@ -313,12 +330,9 @@ class TasteModel:
             c["name"] = "·".join(c["tags"][:2])
 
     def cluster_distances(self, works: list[Work]) -> np.ndarray | None:
-        if self._km is None or not works:
+        if self._themes is None or not works:
             return None
-        docs = [" ".join(t.replace(" ", "_") for t in work_tokens(w) if not t.startswith("原作:")) for w in works]
-        d = self._km.transform(self._vec.transform(docs))
-        order = [c["label"] for c in self.clusters]
-        return d[:, order]
+        return self._themes.distances(works)
 
     def cluster_queries(self, per_cluster: int = 2, min_share: float = 0.06) -> list[tuple[int, list[str]]]:
         """每个口味簇挑几个最有代表性的标签，用来去站里搜。"""
