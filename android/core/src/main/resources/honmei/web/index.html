@@ -290,11 +290,39 @@ body.taste #tasteView { display: block; } body.taste #shelfView { display: none;
 .tv .lead { color: #cfc9bd; margin: 0 0 14px; line-height: 1.7; }
 .muted { color: var(--muted); font-size: 12.5px; line-height: 1.6; }
 .tv-hero { position: relative; margin: -14px -14px 0; padding: 0 16px 22px; overflow: hidden; }
-.tv-hero .mosaic { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; opacity: .55; margin: 0 -16px; }
-.tv-hero .mosaic .tile { aspect-ratio: 3/4; }
-.tv-hero .fade { position: absolute; inset: 0; background: linear-gradient(rgba(12,12,12,.15), rgba(12,12,12,.7) 45%, var(--bg) 70%); pointer-events: none; }
-.tv-hero .in { position: relative; margin-top: -90px; }
-.tv-hero h1 { font-size: 34px; line-height: 1.2; margin: 6px 0 10px; letter-spacing: .02em; }
+.wall { position: relative; height: 430px; overflow: hidden; margin: 0 -16px; }
+.wall .tilt { position: absolute; left: -38%; top: -42%; width: 176%; display: flex; gap: 10px; transform: rotate(-14deg); }
+.wall .col { flex: 1; display: flex; flex-direction: column; gap: 10px; animation: wallUp var(--t, 38s) linear infinite alternate; }
+.wall .col:nth-child(even) { animation-name: wallDown; margin-top: -70px; }
+.wall .tile { aspect-ratio: 3/4; border-radius: 10px; box-shadow: 0 10px 24px rgba(0,0,0,.55); opacity: 0; animation: tileIn .8s var(--d, 0s) ease-out forwards; }
+.wall .tile img { opacity: .82; }
+@keyframes wallUp { from { transform: translateY(0); } to { transform: translateY(-90px); } }
+@keyframes wallDown { from { transform: translateY(-90px); } to { transform: translateY(0); } }
+@keyframes tileIn { from { opacity: 0; transform: scale(.85); } to { opacity: 1; transform: none; } }
+.tv-hero .fade { position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(120% 70% at 70% 10%, transparent 30%, rgba(12,12,12,.55) 70%), linear-gradient(rgba(12,12,12,.05), rgba(12,12,12,.5) 38%, var(--bg) 66%); }
+.tv-hero .glint { position: absolute; inset: 0; pointer-events: none; background: linear-gradient(115deg, transparent 40%, rgba(255,210,31,.10) 50%, transparent 60%);
+  background-size: 250% 100%; animation: glint 7s ease-in-out infinite; mix-blend-mode: screen; }
+@keyframes glint { 0% { background-position: 120% 0; } 60%, 100% { background-position: -120% 0; } }
+.tv-hero .in { position: relative; margin-top: -215px; }
+.tv-hero h1 { font-size: 36px; line-height: 1.2; margin: 6px 0 10px; letter-spacing: .02em; }
+.tv-hero h1 em { background: linear-gradient(100deg, #ffd21f 20%, #fff4b8 40%, #ffd21f 60%); background-size: 220% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: sheen 4.5s ease-in-out infinite; }
+@keyframes sheen { 0% { background-position: 120% 0; } 70%, 100% { background-position: -100% 0; } }
+/* 滑到才出现 */
+.tv .rv { opacity: 0; transform: translateY(22px); transition: opacity .7s ease, transform .7s cubic-bezier(.2,.75,.25,1); transition-delay: calc(var(--i, 0) * 70ms); }
+.tv .rv.in { opacity: 1; transform: none; }
+.tv .br .track2 i, .cl .bar1 i, .dbar i { width: 0; transition: width 1.1s cubic-bezier(.2,.75,.25,1); transition-delay: calc(var(--i, 0) * 70ms + .15s); }
+.cloud .kw { display: inline-block; opacity: 0; transform: translateY(10px) scale(.9); transition: opacity .5s, transform .6s cubic-bezier(.3,1.5,.5,1); transition-delay: calc(var(--i, 0) * 40ms); }
+.cloud.in .kw { opacity: 1; transform: none; }
+.cloud.in .kw.top { animation: bob 3.6s calc(var(--i, 0) * .6s) ease-in-out infinite; }
+@keyframes bob { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+.radar .poly { transform-origin: 200px 180px; transform: scale(0); transition: transform 1.2s cubic-bezier(.2,.9,.25,1.15); }
+.radar .pt { opacity: 0; transition: opacity .4s 1s; }
+.radar.in .poly { transform: none; } .radar.in .pt { opacity: 1; }
+.pair .kn { transition: left 1.2s cubic-bezier(.2,.75,.25,1) .2s; }
+.cl .strip img { animation: kb 18s ease-in-out infinite alternate; }
+.cl .strip div:nth-child(even) img { animation-delay: -9s; }
+@keyframes kb { from { transform: scale(1.05) translateY(0); } to { transform: scale(1.18) translateY(-6%); } }
 .tv-hero .you { display: inline-block; margin-top: 4px; padding: 6px 12px; border: 1px solid #4a3d12; background: rgba(255,210,31,.07); border-radius: 10px; font-size: 13px; }
 .tv-hero .you b { color: var(--y); margin-left: 6px; }
 .tile { position: relative; overflow: hidden; border-radius: 6px; background: var(--a, #222); }
@@ -368,20 +396,30 @@ body.taste #tasteView { display: block; } body.taste #shelfView { display: none;
 .cl .au { font-size: 12px; color: var(--muted); margin-top: 6px; }
 .lonely { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
 .lonely span { font-size: 11.5px; border: 1px solid var(--line); border-radius: 999px; padding: 1px 9px; color: var(--muted); }
-.drift h3 { font-size: 14px; margin: 14px 0 8px; }
-.db { margin-bottom: 10px; }
-.db .hd { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; }
-.db .hd span { color: var(--muted); font-variant-numeric: tabular-nums; } .db .hd em { font-style: normal; color: var(--y); margin-left: 6px; }
-.db .tr { position: relative; height: 10px; border-radius: 99px; background: #222; }
-.db .seg { position: absolute; top: 3px; height: 4px; background: rgba(255,210,31,.5); border-radius: 99px; }
-.db .dot { position: absolute; top: 50%; width: 10px; height: 10px; border-radius: 50%; transform: translate(-50%, -50%); }
-.db .dot.e { border: 2px solid var(--y); background: var(--bg); } .db .dot.r { background: var(--y); }
-.down .db .seg { background: rgba(138,147,166,.5); } .down .db .dot.e { border-color: var(--seen); } .down .db .dot.r { background: var(--seen); }
+.drift h3 { font-size: 14px; margin: 18px 0 10px; display: flex; align-items: center; gap: 8px; }
+.drift h3 small { color: var(--muted); font-weight: 400; font-size: 12px; }
+.legend { display: flex; gap: 16px; font-size: 12px; color: var(--muted); margin-bottom: 4px; }
+.legend i { display: inline-block; width: 18px; height: 6px; border-radius: 99px; margin-right: 6px; vertical-align: middle; }
+.legend .e { background: #4a4a4a; } .legend .r { background: var(--y); }
+.dr { display: grid; grid-template-columns: 1fr 86px; gap: 4px 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid #1b1b1b; }
+.dr .nm { font-weight: 700; font-size: 14.5px; }
+.dr .dl { grid-row: span 3; text-align: center; border-radius: 12px; padding: 6px 0; font-weight: 800; font-size: 17px; line-height: 1.1; }
+.dr .dl small { display: block; font-size: 10px; margin-top: 2px; padding: 0 4px; font-weight: 400; opacity: .8; }
+.up .dl { background: rgba(255,210,31,.12); color: var(--y); } .down .dl { background: rgba(138,147,166,.14); color: #b9c0cc; }
+.dbar { display: grid; grid-template-columns: 1fr 38px; gap: 8px; align-items: center; font-size: 11.5px; color: var(--muted); font-variant-numeric: tabular-nums; }
+.dbar .tk { height: 7px; border-radius: 99px; background: #1f1f1f; overflow: hidden; }
+.dbar i { display: block; height: 100%; border-radius: 99px; background: #4a4a4a; }
+.dbar.r i { background: var(--y); } .down .dbar.r i { background: #8a93a6; }
+.dbar.r { color: var(--ink); }
 .aibox { background: radial-gradient(circle at 80% 0%, rgba(255,210,31,.12), transparent 60%), var(--panel); border: 1px solid #3a3215; border-radius: 18px; padding: 18px 16px; }
 .aibox .steps3 { margin: 12px 0 14px; padding-left: 18px; color: #cfc9bd; font-size: 13px; line-height: 1.8; }
 .aibox .row { gap: 10px; }
 .aibox .row .btn { flex: 1; }
-.share { background: linear-gradient(150deg, #1c1a12, #0f0f0f 60%); border: 1px solid #3a3215; border-radius: 18px; padding: 20px 18px; }
+.share { position: relative; border-radius: 18px; padding: 20px 18px; border: 1.5px solid transparent; overflow: hidden;
+  background: linear-gradient(150deg, #1c1a12, #0f0f0f 60%) padding-box, linear-gradient(var(--ang, 120deg), #3a3215, #ffd21f, #3a3215 45%, #6b5a1a 70%, #3a3215) border-box;
+  animation: holo 6s linear infinite; }
+@property --ang { syntax: "<angle>"; inherits: false; initial-value: 120deg; }
+@keyframes holo { to { --ang: 480deg; } }
 .share .s1 { font-size: 11px; letter-spacing: .2em; color: var(--y); }
 .share .s2 { font-size: 26px; font-weight: 900; margin: 8px 0; }
 .share .s3 { color: #ddd7ca; line-height: 1.7; }
@@ -1056,7 +1094,7 @@ async function loadTaste() {
 }
 function bars(list, key = "share", label = "tag", fmt = pct, cls = "") {
   const m = Math.max(...list.map(x => x[key]), 1e-9);
-  return `<div class="bars ${cls}">${list.map(x => `<div class="br"><span class="t">${esc(x[label])}</span><div class="track2"><i style="width:${(100 * x[key] / m).toFixed(1)}%"></i></div><span class="v">${fmt(x[key])}</span></div>`).join("")}</div>`;
+  return `<div class="bars ${cls}">${list.map(x => `<div class="br"><span class="t">${esc(x[label])}</span><div class="track2"><i data-w="${(100 * x[key] / m).toFixed(1)}"></i></div><span class="v">${fmt(x[key])}</span></div>`).join("")}</div>`;
 }
 function radar(axes) {
   const keys = Object.keys(axes), n = keys.length, R = 128, cx = 200, cy = 180;
@@ -1066,73 +1104,114 @@ function radar(axes) {
   for (const f of [0.25, 0.5, 0.75, 1]) g += `<polygon points="${keys.map((_, i) => pt(i, R * f).join(",")).join(" ")}" fill="none" stroke="#2a2a2a"/>`;
   keys.forEach((k, i) => { const [x, y] = pt(i, R); g += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#2a2a2a"/>`;
     const [lx, ly] = pt(i, R + 24); g += `<text x="${lx}" y="${ly}" fill="#bdb7aa" font-size="15" text-anchor="middle" dominant-baseline="middle">${esc(k)}</text>`; });
-  g += `<polygon points="${keys.map((k, i) => pt(i, R * axes[k] / max).join(",")).join(" ")}" fill="rgba(255,210,31,.25)" stroke="#ffd21f" stroke-width="2"/>`;
-  keys.forEach((k, i) => { const [x, y] = pt(i, R * axes[k] / max); g += `<circle cx="${x}" cy="${y}" r="4" fill="#ffd21f"/>`; });
-  return `<svg viewBox="0 0 400 360" width="100%" role="img" aria-label="倾向雷达">${g}</svg>`;
+  g += `<polygon class="poly" points="${keys.map((k, i) => pt(i, R * axes[k] / max).join(",")).join(" ")}" fill="rgba(255,210,31,.25)" stroke="#ffd21f" stroke-width="2"/>`;
+  keys.forEach((k, i) => { const [x, y] = pt(i, R * axes[k] / max); g += `<circle class="pt" cx="${x}" cy="${y}" r="4" fill="#ffd21f"/>`; });
+  return `<svg class="radar rv" viewBox="0 0 400 360" width="100%" role="img" aria-label="倾向雷达">${g}</svg>`;
 }
 function pairs(a) {
   const P = [["纯爱", "禁忌"], ["被支配", "支配"], ["丰满", "娇小"], ["剧情", "重口"]].filter(([l, r]) => l in a && r in a);
   return `<div class="pairs">${P.map(([l, r]) => {
     const t = (a[l] || 0) + (a[r] || 0) || 1, pos = 100 * (a[r] || 0) / t;
-    return `<div class="pair"><span>${l} ${pct(a[l])}</span><div class="tk"><div class="kn" style="left:${pos.toFixed(1)}%"></div></div><span class="r">${pct(a[r])} ${r}</span></div>`;
+    return `<div class="pair rv"><span>${l} ${pct(a[l])}</span><div class="tk"><div class="kn" style="left:50%" data-l="${pos.toFixed(1)}"></div></div><span class="r">${pct(a[r])} ${r}</span></div>`;
   }).join("")}</div>`;
 }
 function driftBlock(rising, falling) {
   if (!rising.length && !falling.length) return `<p class="muted">早期和近期的收藏口味差不多，没有明显变化。</p>`;
   const max = Math.max(...[...rising, ...falling].flatMap(d => [d.early, d.recent]), 0.1);
-  const row = (d) => {
-    const e = 100 * d.early / max, r = 100 * d.recent / max, delta = Math.round((d.recent - d.early) * 100);
-    return `<div class="db"><div class="hd"><b>${esc(d.tag)}</b><span>${pct(d.early)} → ${pct(d.recent)}<em>${delta > 0 ? "+" : ""}${delta}</em></span></div>
-      <div class="tr"><div class="seg" style="left:${Math.min(e, r).toFixed(1)}%;width:${Math.abs(r - e).toFixed(1)}%"></div><div class="dot e" style="left:${e.toFixed(1)}%"></div><div class="dot r" style="left:${r.toFixed(1)}%"></div></div></div>`;
+  const row = (d, i) => {
+    const delta = Math.round((d.recent - d.early) * 100);
+    const ratio = d.early > 0.005 ? d.recent / d.early : 0;
+    const times = ratio >= 1.5 ? `是以前的 ${ratio.toFixed(1)} 倍` : ratio > 0 && ratio <= 0.6 ? `只剩以前的 ${Math.round(ratio * 100)}%` : delta > 0 ? "多了" : "少了";
+    return `<div class="dr rv" style="--i:${i}"><div class="nm">${esc(d.tag)}</div><div class="dl">${delta > 0 ? "+" : ""}${delta}%<small>${times}</small></div>
+      <div class="dbar"><div class="tk"><i data-w="${(100 * d.early / max).toFixed(1)}"></i></div><span>${pct(d.early)}</span></div>
+      <div class="dbar r"><div class="tk"><i data-w="${(100 * d.recent / max).toFixed(1)}"></i></div><span>${pct(d.recent)}</span></div></div>`;
   };
-  return `<div class="drift"><div class="up"><h3>越来越爱</h3>${rising.slice(0, 5).map(row).join("") || `<p class="muted">没有明显上升的标签</p>`}</div>
-    <div class="down"><h3>渐渐淡了</h3>${falling.slice(0, 5).map(row).join("") || `<p class="muted">没有明显下降的标签</p>`}</div></div>
-    <p class="muted">按收藏先后，比较最早 25% 和最新 25%；空心点是早期，实心点是近期。</p>`;
+  return `<p class="lead">把收藏按时间切开，比较<b>最早收的 1/4</b> 和<b>最近收的 1/4</b>：每个词出现在百分之几的作品里。</p>
+    <div class="legend"><span><i class="e"></i>早期</span><span><i class="r"></i>近期</span></div>
+    <div class="drift"><div class="up"><h3>↑ 越来越爱 <small>近期明显变多</small></h3>${rising.slice(0, 5).map(row).join("") || `<p class="muted">没有明显上升的标签</p>`}</div>
+    <div class="down"><h3>↓ 渐渐淡了 <small>近期明显变少</small></h3>${falling.slice(0, 5).map(row).join("") || `<p class="muted">没有明显下降的标签</p>`}</div></div>`;
 }
 const CL_NAMES = ["主旋律", "第二人格", "隐藏面", "小众心头好", "偶尔想起", "冷门角落", "边角料", "边角料"];
 function clusterCard(c, i) {
   const strip = (c.works || []).slice(0, 4).map(b => `<div><img loading="lazy" src="${esc(b.cover)}" alt="" onerror="this.remove()"></div>`).join("");
-  return `<div class="cl"><div class="strip">${strip}</div><div class="shade"></div><div class="in">
+  return `<div class="cl rv" style="--i:${i % 3}"><div class="strip">${strip}</div><div class="shade"></div><div class="in">
     <div class="nm">${esc(c.name)}<small>${CL_NAMES[i] || ""} · ${pct(c.share)}</small></div>
-    <div class="bar1"><i style="width:${(c.share * 100).toFixed(1)}%"></i></div>
+    <div class="bar1"><i data-w="${Math.min(100, c.share * 250).toFixed(1)}"></i></div>
     ${c.signature && c.signature.length ? `<div class="sig">这一簇格外多见：<b>${c.signature.map(esc).join("、")}</b></div>` : ""}
     <div class="au">${esc((c.authors || []).join(" · "))}</div></div></div>`;
 }
 function authorsBlock(list) {
   const top = list.slice(0, 3), rest = list.slice(3, 8);
-  return top.map((a, i) => `<div class="pod"><span class="n">${i + 1}</span><div style="min-width:0"><div class="name">${esc(a.name)}</div><div class="c">收了 ${a.count} 本</div></div>
+  return top.map((a, i) => `<div class="pod rv" style="--i:${i}"><span class="n">${i + 1}</span><div style="min-width:0"><div class="name">${esc(a.name)}</div><div class="c">收了 ${a.count} 本</div></div>
       <div class="ws">${(a.works || []).map(b => wlink(b, tile(b))).join("")}</div></div>`).join("")
     + (rest.length ? `<div class="rest">${rest.map((a, i) => `<div class="row"><span class="n">${i + 4}</span><span>${esc(a.name)}</span><span class="c">${a.count} 本</span></div>`).join("")}</div>` : "");
 }
 
+function wall(list) {
+  if (!list.length) return `<div class="wall"></div>`;
+  const cols = 5, per = 5, L = [];
+  while (L.length < cols * per) L.push(...list);
+  let h = "";
+  for (let c = 0; c < cols; c++) {
+    h += `<div class="col" style="--t:${30 + c * 7}s">`;
+    for (let r = 0; r < per; r++) { const b = L[c * per + r]; h += `<div class="tile" style="--a:${hue(b.title)};--d:${((c + r) * 0.07).toFixed(2)}s"><span>${esc(b.title)}</span><img loading="lazy" src="${esc(b.cover)}" alt="" onerror="this.remove()"></div>`; }
+    h += `</div>`;
+  }
+  return `<div class="wall"><div class="tilt">${h}</div></div>`;
+}
+function countUp(el) {
+  if (el.dataset.done) return; el.dataset.done = 1;
+  const to = +el.dataset.count, t0 = performance.now(), dur = 1000;
+  if (!to) return;
+  const step = (t) => { const k = Math.min(1, (t - t0) / dur); el.textContent = Math.round(to * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+function showIn(el) {
+  el.classList.add("in");
+  const own = (x) => x.parentElement.closest(".rv, section, .tv-hero") === el || x.closest(".rv, section, .tv-hero") === el;
+  el.querySelectorAll("[data-w]").forEach(i => { if (own(i)) i.style.width = i.dataset.w + "%"; });
+  el.querySelectorAll("[data-l]").forEach(k => { if (own(k)) k.style.left = k.dataset.l + "%"; });
+  el.querySelectorAll("[data-count]").forEach(c => { if (own(c)) countUp(c); });
+  if (el.dataset.count) countUp(el);
+}
+let revealObs = null;
+function revealSetup() {
+  const v = $("tasteView");
+  const targets = [...v.querySelectorAll(".rv, section, .tv-hero")];
+  const reduced = (() => { try { return matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return false; } })();
+  if (revealObs) revealObs.disconnect();
+  if (!("IntersectionObserver" in window) || reduced) { targets.forEach(showIn); return; }
+  revealObs = new IntersectionObserver((es) => es.forEach(e => { if (e.isIntersecting) { showIn(e.target); revealObs.unobserve(e.target); } }), { rootMargin: "0px 0px -8% 0px", threshold: 0.12 });
+  targets.forEach(t => revealObs.observe(t));
+}
 function renderTaste() {
   const D = TV, v = $("tasteView");
   if (!D || D.empty) { v.innerHTML = `<section><div class="kicker">口味谱</div><h2>还没有收藏</h2><p class="lead">先登录并导入哔咔或禁漫的收藏，这里会画出你的口味。</p><button class="btn y" onclick="openSet()">去导入</button></section>`; return; }
   const ps = D.per_site || {}, topTags = D.top_tags.slice(0, 24), t0 = topTags[0], topAuthor = D.authors[0];
   const maxShare = t0?.share || 1;
-  const cloud = topTags.map((t, i) => `<span class="kw" data-kw="${esc(t.tag)}" style="font-size:${(14 + 30 * Math.sqrt(t.share / maxShare)).toFixed(0)}px;color:${i < 3 ? "var(--y)" : i < 8 ? "#f4f1e8" : "#8f8a80"}">${esc(t.tag)}</span>`).join("");
+  const cloud = topTags.map((t, i) => `<span class="kw${i < 3 ? " top" : ""}" style="--i:${i}" data-kw="${esc(t.tag)}" data-st="font-size:${(14 + 30 * Math.sqrt(t.share / maxShare)).toFixed(0)}px;color:${i < 3 ? "var(--y)" : i < 8 ? "#f4f1e8" : "#8f8a80"}">${esc(t.tag)}</span>`).join("").replace(/" data-st="/g, ";");
   const hid = D.hidden_tags || [];
   const dmax = D.dimensions.reduce((m, x) => Math.max(m, x.top[0]?.share || 0), 0);
   const sec = [
-    `<div class="tv-hero"><div class="mosaic">${(D.mosaic || []).slice(0, 18).map(tile).join("")}</div><div class="fade"></div>
+    `<div class="tv-hero">${wall(D.mosaic || [])}<div class="fade"></div><div class="glint"></div>
       <div class="in"><div class="kicker">HONMEI · 口味谱</div><h1>你的<em>口味谱</em></h1>
       <p class="lead">${D.total} 本收藏，${D.distinct_authors} 位作者。全部在这台手机上算出来，不上传。</p>
       ${D.total < 20 ? `<div class="note thin">只有 ${D.total} 本收藏，样本还少，下面的结论可能不太准。</div>` : ""}
-      <div class="mini"><div><b>${D.total}</b><span>本收藏</span></div><div><b>${D.clusters.length}</b><span>种口味</span></div>
+      <div class="mini"><div><b data-count="${D.total}">${D.total}</b><span>本收藏</span></div><div><b data-count="${D.clusters.length}">${D.clusters.length}</b><span>种口味</span></div>
         <div><b>${esc(t0?.tag || "—")}</b><span>最常见的词</span></div><div><b>${esc(topAuthor?.name || "—")}</b><span>收得最多的作者</span></div></div></div></div>`,
-    `<div class="kicker">一路收藏</div><h2>你一共把 <em>${D.total}</em> 本<br>放进了收藏夹</h2>
-     <div class="split">${ps.pica ? `<div class="p" style="flex:${ps.pica} 1 0">哔咔 ${ps.pica}</div>` : ""}${ps.jm ? `<div class="j" style="flex:${ps.jm} 1 0">禁漫 ${ps.jm}</div>` : ""}</div>
+    `<div class="kicker">一路收藏</div><h2>你一共把 <em data-count="${D.total}">${D.total}</em> 本<br>放进了收藏夹</h2>
+     <div class="split rv">${ps.pica ? `<div class="p" style="flex:${ps.pica} 1 0">哔咔 ${ps.pica}</div>` : ""}${ps.jm ? `<div class="j" style="flex:${ps.jm} 1 0">禁漫 ${ps.jm}</div>` : ""}</div>
      <div class="stats">
-      <div class="st2"><b>${D.distinct_authors}</b><span>位作者</span></div>
-      <div class="st2"><b>${D.repeat_authors}</b><span>位作者收了不止一本</span></div>
-      <div class="st2"><b>${pct(D.long_share)}</b><span>是长篇</span></div>
-      <div class="st2"><b>${pct(D.color_share)}</b><span>是全彩</span></div>
-      <div class="st2"><b>${D.both_sites}</b><span>本两边都收藏了</span></div>
-      <div class="st2"><b>${D.feedback?.want || 0}</b><span>本在书架上心动过</span></div></div>`,
-    `<div class="kicker">口味关键词</div><h2>翻来覆去，<br>你总在找 <em>${esc(t0?.tag || "")}</em></h2><div class="cloud">${cloud}</div>
+      <div class="st2 rv"><b data-count="${D.distinct_authors}">${D.distinct_authors}</b><span>位作者</span></div>
+      <div class="st2 rv"><b data-count="${D.repeat_authors}">${D.repeat_authors}</b><span>位作者收了不止一本</span></div>
+      <div class="st2 rv"><b>${pct(D.long_share)}</b><span>是长篇</span></div>
+      <div class="st2 rv"><b>${pct(D.color_share)}</b><span>是全彩</span></div>
+      <div class="st2 rv"><b data-count="${D.both_sites}">${D.both_sites}</b><span>本两边都收藏了</span></div>
+      <div class="st2 rv"><b>${D.feedback?.want || 0}</b><span>本在书架上心动过</span></div></div>`,
+    `<div class="kicker">口味关键词</div><h2>翻来覆去，<br>你总在找 <em>${esc(t0?.tag || "")}</em></h2><div class="cloud rv">${cloud}</div>
      <p class="muted" style="margin-top:14px">字越大，在收藏里出现得越多：${esc(t0?.tag || "")} 出现在 ${pct(t0?.share)} 的收藏里。点一个词可以把它屏蔽，屏蔽的词不进口味谱，也不发给 AI。</p>
      ${hid.length ? `<div class="hid">已屏蔽：${hid.map(t => `<button data-unhide="${esc(t)}">${esc(t)} ↺</button>`).join("")}</div>` : ""}`,
-    D.dimensions.length ? `<div class="kicker">拆开来看</div><h2>每个方向，<br>你最常停在哪</h2><div class="dims">${D.dimensions.map(dm => `<div class="dim"><h3>${esc(dm.name)}</h3>${bars(dm.top.slice(0, 5), "share", "tag", pct)}</div>`).join("")}</div><div class="swipe">← 左右滑动，共 ${D.dimensions.length} 个方向 →</div>` : "",
+    D.dimensions.length ? `<div class="kicker">拆开来看</div><h2>每个方向，<br>你最常停在哪</h2><div class="dims rv">${D.dimensions.map(dm => `<div class="dim"><h3>${esc(dm.name)}</h3>${bars(dm.top.slice(0, 5), "share", "tag", pct)}</div>`).join("")}</div><div class="swipe">← 左右滑动，共 ${D.dimensions.length} 个方向 →</div>` : "",
     `<div class="kicker">倾向</div><h2>你在光谱的<em>哪一端</em></h2>${radar(D.axes)}${pairs(D.axes)}
      <p class="muted" style="margin-top:14px">每一项是命中相关标签的收藏比例；同一本可以同时命中好几项。</p>`,
     topAuthor ? `<div class="kicker">本命作者</div><h2><em>${esc(topAuthor.name)}</em><br>是你翻得最多的名字</h2>${authorsBlock(D.authors)}` : "",
@@ -1148,13 +1227,13 @@ function renderTaste() {
      <div class="covers">${D.outliers.map(b => cov(b, b.rare_tags?.length ? `<div class="rt">${b.rare_tags.slice(0, 2).map(esc).join(" · ")}</div>` : "")).join("")}</div>
      <div class="lonely">${(D.lonely_tags?.examples || []).map(t => `<span>${esc(t)}</span>`).join("")}</div>
      <p class="muted" style="margin-top:10px">${D.lonely_tags?.count || 0} 个标签只出现过一次；${D.one_book_authors || 0} 位作者你只收过一本。</p>` : "",
-    `<div class="kicker">口味的迁徙</div><h2>从早期到近期，<br>你<em>变了</em></h2>${driftBlock(D.rising, D.falling)}`,
-    `<div class="kicker">AI 侧写</div><div class="aibox"><h2 style="margin:0 0 8px">让 AI <em>读</em>一读你</h2>
+    `<div class="kicker">口味的迁徙</div><h2>${D.rising?.length ? `最近，你越来越爱<br><em>${esc(D.rising[0].tag)}</em>` : "从早期到近期，<br>你的口味"}</h2>${driftBlock(D.rising, D.falling)}`,
+    `<div class="kicker">AI 侧写</div><div class="aibox rv"><h2 style="margin:0 0 8px">让 AI <em>读</em>一读你</h2>
       <p class="lead" style="margin:0">把口味谱压成一段提示词，交给你常用的 AI（ChatGPT、Claude、豆包、Kimi 都行），它会写一份不超过 900 字的侧写，最后猜几件你没说过的事。</p>
       <ol class="steps3"><li>点“复制提示词”或“发给 AI App”</li><li>在 AI 里粘贴、发送</li><li>看它怎么说你</li></ol>
       <div class="row"><button class="btn y" id="pCopy">复制提示词</button><button class="btn" id="pShare">发给 AI App</button></div>
       <p class="muted" id="pMsg" style="margin:10px 0 0">提示词里有口味统计和一部分作品标题（你点的本命一定在内），不含账号。</p></div>`,
-    `<div class="kicker">一句话</div><div class="share"><div class="s1">HONMEI · 口味谱</div>
+    `<div class="kicker">一句话</div><div class="share rv"><div class="s1">HONMEI · 口味谱</div>
       <div class="s2">${esc(t0 ? t0.tag + "信徒" : "收藏家")}</div>
       <div class="s3">${D.total} 本收藏里，${pct(t0?.share)} 都带着「${esc(t0?.tag || "")}」。</div>
       <div class="chips">${topTags.slice(0, 5).map(t => `<span>${esc(t.tag)}</span>`).join("")}</div>
@@ -1162,7 +1241,9 @@ function renderTaste() {
       <p class="muted" style="margin-top:12px">想分享就截这张卡片，里面没有作品名。</p>`,
   ].filter(Boolean);
   v.innerHTML = sec.map((h, i) => i ? `<section>${h}</section>` : h).join("");
-  wireTaste();
+  v.querySelectorAll("section > h2, section > .kicker").forEach(el => el.classList.add("rv"));
+  v.querySelectorAll(".st2").forEach((el, i) => el.style.setProperty("--i", i));
+  wireTaste(); revealSetup();
 }
 function wireTaste() {
   document.querySelectorAll("[data-unhide]").forEach(b => b.onclick = () => setHidden(b.dataset.unhide, false));
