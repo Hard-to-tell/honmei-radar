@@ -12,7 +12,7 @@ class AndroidSql(path: String) : Sql {
     private fun bindArgs(args: List<Any?>): Array<Any?> = args.map { if (it is Boolean) (if (it) 1 else 0) else it }.toTypedArray()
 
     override fun query(sql: String, args: List<Any?>): List<Row> {
-        val strArgs = args.map { a -> when (a) { null -> null; is Boolean -> if (a) "1" else "0"; else -> a.toString() } }.toTypedArray()
+        val strArgs: Array<String> = args.map { a -> when (a) { null -> ""; is Boolean -> if (a) "1" else "0"; else -> a.toString() } }.toTypedArray()
         // rawQuery 只收字符串参数；数字比较用的列在 SQLite 里会按亲和性自动转换
         return db.rawQueryWithFactory(null, sql, strArgs, null).use { c ->
             val out = ArrayList<Row>(c.count)
