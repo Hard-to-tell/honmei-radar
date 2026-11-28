@@ -30,6 +30,8 @@ class PipelineTest {
     @Test fun normalize() {
         assertTrue(Norm.normTag("強暴") != null)
         println("t2s: " + OpenCC.convert("漢化 戀愛 強姦"))
+        val pt = Norm.parseTitle("サンプルタイトル [中國翻譯] [無修正] [DL版]-1280x")
+        assertTrue(pt.core == "サンプルタイトル", pt.core)
     }
 
     @Test fun pipeline() {
@@ -61,5 +63,22 @@ class PipelineTest {
         }
         val st = Json.stringify(svc.status())
         assertTrue(st.contains("calibrate"))
+    }
+}
+
+class InsightsTest {
+    @Test fun insights() {
+        val src = System.getenv("HONMEI_TEST_DB") ?: return
+        val dir = File(System.getProperty("java.io.tmpdir"), "honmei-ins-" + System.nanoTime()).apply { mkdirs() }
+        val dbf = File(dir, "shelf.db"); File(src).copyTo(dbf)
+        val db = DB(JdbcSql(dbf.path)); Env.init(dir, db)
+        var t = System.currentTimeMillis()
+        val s = Insights.summary(db)
+        println("口味谱：${System.currentTimeMillis() - t}ms，簇 ${s["clusters"].arr().size}，孤例 ${s["outliers"].arr().size}，作者 ${s["authors"].arr().size}，维度 ${s["dimensions"].arr().size}")
+        println("axes=" + s["axes"])
+        t = System.currentTimeMillis()
+        val p = Portrait.prompt(db)
+        println("提示词 ${p.length} 字，用时 ${System.currentTimeMillis() - t}ms")
+        assertTrue(p.length > 1000)
     }
 }

@@ -245,8 +245,10 @@ object Norm {
         return r
     }
 
+    private val RES_TAIL = Regex("""[\s\-_]+\d{3,4}x(\d{3,4})?$""")
+
     private fun doParse(title: String): ParsedTitle {
-        var s = nfkc(title).trim()
+        var s = nfkc(title).trim().replace(RES_TAIL, "")   // “…[DL版]-1280x” 这类分辨率尾巴挡住了括号拆解
         val pt = ParsedTitle(core = "")
         val leading = ArrayList<Pair<Char, String>>()
         while (true) {

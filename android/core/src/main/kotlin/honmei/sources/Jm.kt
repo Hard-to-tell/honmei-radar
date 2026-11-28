@@ -114,7 +114,7 @@ class JmAdapter(private val db: DB) : SiteAdapter {
             val ub = "https://$dom$path".toHttpUrl().newBuilder()
             for ((k, v) in params) ub.addQueryParameter(k, v.str())
             val rb = Request.Builder().url(ub.build())
-                .header("Accept-Encoding", "gzip, deflate").header("user-agent", UA)
+                .header("user-agent", UA)
                 .header("token", Http.md5hex(ts + secret)).header("tokenparam", "$ts,$appVersion")
             if (form != null) rb.post(FormBody.Builder().apply { form.forEach { (k, v) -> add(k, v) } }.build())
             try {

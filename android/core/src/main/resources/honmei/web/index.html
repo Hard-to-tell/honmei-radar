@@ -31,7 +31,7 @@ header { position: sticky; top: 0; z-index: 20; background: rgba(12,12,12,.9); b
   display: grid; place-items: center; font-weight: 900; font-size: 19px; }
 .word { display: flex; flex-direction: column; line-height: 1.05; }
 .word b { font-size: 16px; letter-spacing: .14em; }
-.word small { color: var(--muted); font-size: 10.5px; letter-spacing: .04em; }
+.word small { color: var(--muted); font-size: 10.5px; letter-spacing: .04em; white-space: nowrap; }
 .spacer { flex: 1; }
 .stat { color: var(--muted); font-size: 12px; text-align: right; line-height: 1.35; }
 .stat b { color: var(--ink); font-weight: 600; }
@@ -156,37 +156,55 @@ pre.expl { white-space: pre-wrap; background: var(--panel); border: 1px solid va
 .err { color: #ff8a7a; margin: 8px 0 0; font-size: 13px; line-height: 1.6; }
 .err:empty { display: none; }
 
-/* ---------- 卡片 ---------- */
+/* ---------- 卡片（紧凑：封面 + 标题 + 两个快捷键，详情从底部滑出） ---------- */
 .grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
 @media (min-width: 640px) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; } }
 .card { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; display: flex; flex-direction: column; }
-.card.fb-skip, .card.fb-seen, .card.fb-dislike { opacity: .45; }
-.cover { position: relative; aspect-ratio: 3 / 4; background: linear-gradient(160deg, #222, #151515); display: block; overflow: hidden; }
+.card.fb-skip, .card.fb-seen, .card.fb-dislike { opacity: .42; }
+.cover { position: relative; aspect-ratio: 3 / 4; background: linear-gradient(160deg, #222, #151515); display: block; overflow: hidden; cursor: pointer; border: 0; padding: 0; width: 100%; }
 .cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
 .ph { position: absolute; inset: 0; display: grid; place-items: center; padding: 14px; text-align: center; color: var(--faint); font-size: 12.5px; }
-.cover::after { content: ""; position: absolute; inset: auto 0 0 0; height: 40%; background: linear-gradient(transparent, rgba(0,0,0,.75)); pointer-events: none; }
+.cover::after { content: ""; position: absolute; inset: auto 0 0 0; height: 45%; background: linear-gradient(transparent, rgba(0,0,0,.8)); pointer-events: none; }
 .pos { position: absolute; z-index: 2; left: 8px; top: 8px; background: var(--y); color: var(--y-ink); font-weight: 800; border-radius: 7px; min-width: 24px; text-align: center; padding: 0 6px; font-size: 12.5px; }
 .route { position: absolute; z-index: 2; right: 8px; top: 8px; background: rgba(0,0,0,.7); border: 1px solid rgba(255,255,255,.15); color: #eee; border-radius: 7px; padding: 0 7px; font-size: 11.5px; }
-.body { padding: 10px 10px 10px; display: flex; flex-direction: column; gap: 7px; flex: 1; }
-.title { font-weight: 650; font-size: 13.5px; line-height: 1.38; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-decoration: none; }
+.fbm { position: absolute; z-index: 2; right: 8px; bottom: 8px; font-size: 11.5px; font-weight: 700; border-radius: 6px; padding: 0 7px; background: rgba(0,0,0,.75); color: #eee; }
+.fbm.want, .fbm.seen_like { background: var(--y); color: var(--y-ink); }
+.foot { padding: 8px 9px 9px; display: flex; flex-direction: column; gap: 6px; }
+.title { font-weight: 650; font-size: 13px; line-height: 1.38; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; min-height: 2.76em; }
 .meta { color: var(--muted); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.reason { font-size: 12px; color: #d9d4c7; border-left: 2px solid var(--y); padding: 1px 0 1px 7px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
-.tags { display: flex; flex-wrap: wrap; gap: 4px; }
-.tag { font-size: 11px; background: var(--bg2); border: 1px solid var(--line); color: var(--muted); border-radius: 999px; padding: 1px 8px; cursor: pointer; line-height: 1.55; }
+.quick { display: grid; grid-template-columns: 1fr 1fr 34px; gap: 6px; }
+.quick button { border: 1px solid var(--line); background: var(--bg2); border-radius: 10px; height: 34px; padding: 0; white-space: nowrap; cursor: pointer; font-size: 12.5px; color: var(--muted); }
+.quick button:active { transform: scale(.95); }
+.quick button.want.on { background: var(--y); border-color: var(--y); color: var(--y-ink); font-weight: 700; }
+.quick button.skip.on { background: var(--skip); border-color: var(--skip); color: #fff; }
+.quick .more { font-size: 16px; letter-spacing: 1px; color: var(--ink); }
+.card.is-blocked .cover, .card.is-blocked .title { opacity: .4; }
+
+/* ---------- 详情 ---------- */
+.it-top { display: grid; grid-template-columns: 108px 1fr; gap: 14px; align-items: start; }
+.it-top .im { position: relative; aspect-ratio: 3/4; border-radius: 10px; overflow: hidden; background: #1b1b1b; }
+.it-top .im img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.it-top h3 { margin: 0 0 6px; font-size: 16px; line-height: 1.4; }
+.it-top .meta { white-space: normal; font-size: 12.5px; }
+.it-top .badges { display: flex; gap: 6px; flex-wrap: wrap; margin-top: 8px; }
+.it-top .badges span { font-size: 11.5px; border: 1px solid var(--line); border-radius: 6px; padding: 0 7px; color: var(--muted); }
+.reason { font-size: 13.5px; color: #e4dfd2; border-left: 2px solid var(--y); padding: 2px 0 2px 10px; margin: 14px 0 10px; line-height: 1.65; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; margin: 8px 0 4px; }
+.tag { font-size: 12px; background: var(--bg2); border: 1px solid var(--line); color: var(--muted); border-radius: 999px; padding: 3px 10px; cursor: pointer; }
 .tag.bl { text-decoration: line-through; color: var(--skip); border-color: rgba(255,90,95,.4); }
-.card.is-blocked .cover, .card.is-blocked .title, .card.is-blocked .reason { opacity: .4; }
-.blnote { font-size: 11.5px; color: var(--skip); }
-.why { align-self: flex-start; background: none; border: 0; padding: 2px 0; color: var(--y); font-size: 12px; cursor: pointer; }
-.acts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: auto; padding-top: 2px; }
-.acts button { border: 1px solid var(--line); background: var(--bg2); border-radius: 10px; padding: 8px 0; cursor: pointer; font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; }
-.acts button:active { transform: scale(.96); }
-.acts button.want.on { background: var(--y); border-color: var(--y); color: var(--y-ink); font-weight: 700; }
-.acts button.skip.on { background: var(--skip); border-color: var(--skip); color: #fff; }
-.acts button.dislike.on { background: #6b1f22; border-color: var(--skip); color: #fff; }
-.acts button.seen.on { background: var(--seen); border-color: var(--seen); color: #111; }
-.seenq { display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 11.5px; color: var(--muted); }
-.seenq button { border: 1px solid var(--line); background: none; color: var(--muted); border-radius: 999px; padding: 3px 10px; font-size: 12px; cursor: pointer; }
-.seenq button.on { background: var(--y); border-color: var(--y); color: var(--y-ink); font-weight: 700; }
+.blnote { font-size: 12px; color: var(--skip); }
+.acts5 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px; }
+.acts5 button { border: 1px solid var(--line); background: var(--panel); border-radius: 12px; padding: 11px 0; cursor: pointer; font-size: 13.5px; color: var(--ink); }
+.acts5 button:active { transform: scale(.96); }
+.acts5 button.want.on { background: var(--y); border-color: var(--y); color: var(--y-ink); font-weight: 700; }
+.acts5 button.skip.on { background: var(--skip); border-color: var(--skip); color: #fff; }
+.acts5 button.dislike.on { background: #6b1f22; border-color: var(--skip); color: #fff; }
+.acts5 button.seen.on, .acts5 button.seen_like.on { background: var(--seen); border-color: var(--seen); color: #111; font-weight: 700; }
+.acts5 button.seen_like.on { background: var(--y); border-color: var(--y); }
+details.why { margin-top: 14px; }
+details.why summary { color: var(--y); font-size: 13px; cursor: pointer; padding: 4px 0; }
+.go { display: flex; gap: 8px; margin-top: 14px; }
+.go .btn { flex: 1; text-align: center; justify-content: center; text-decoration: none; display: inline-flex; }
 
 /* ---------- 抽卡 ---------- */
 .slot { perspective: 1400px; min-width: 0; }
@@ -194,11 +212,7 @@ pre.expl { white-space: pre-wrap; background: var(--panel); border: 1px solid va
 @keyframes deal { from { opacity: 0; transform: translateY(-28px) scale(.94) rotate(-2.5deg); } to { opacity: 1; transform: none; } }
 .flip { position: relative; height: 100%; transform-style: preserve-3d; transition: transform .6s cubic-bezier(.2,.75,.25,1); }
 .flip.down { transform: rotateY(180deg); }
-.slot.is-down { align-self: start; }
-.flip.down .card .body, .flip.opening .card .body { display: none; }
-.flip.down .card, .flip.opening .card { height: auto; }
-.flip.unfold .card .body { animation: bodyIn .35s ease-out; }
-@keyframes bodyIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+.flip.down .card .foot, .flip.opening .card .foot { visibility: hidden; }
 .flip > .card { height: 100%; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
 .back { position: absolute; inset: 0; transform: rotateY(180deg); backface-visibility: hidden; -webkit-backface-visibility: hidden;
   border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; color: var(--y); padding: 0;
@@ -265,6 +279,122 @@ pre.expl { white-space: pre-wrap; background: var(--panel); border: 1px solid va
 .hero h1 span { color: var(--y); }
 .hero p { margin: 0; color: var(--muted); }
 
+/* ---------- 口味谱 ---------- */
+#tasteView { display: none; }
+body.taste #tasteView { display: block; } body.taste #shelfView { display: none; }
+.tv section { padding: 22px 2px 26px; border-bottom: 1px solid #1d1d1d; }
+.tv section:last-child { border-bottom: 0; }
+.kicker { color: var(--y); font-size: 11.5px; letter-spacing: .18em; margin-bottom: 8px; }
+.tv h2 { margin: 0 0 14px; font-size: 23px; line-height: 1.35; letter-spacing: .01em; }
+.tv h2 em, .tv h1 em { font-style: normal; color: var(--y); }
+.tv .lead { color: #cfc9bd; margin: 0 0 14px; line-height: 1.7; }
+.muted { color: var(--muted); font-size: 12.5px; line-height: 1.6; }
+.tv-hero { position: relative; margin: -14px -14px 0; padding: 0 16px 22px; overflow: hidden; }
+.tv-hero .mosaic { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; opacity: .55; margin: 0 -16px; }
+.tv-hero .mosaic .tile { aspect-ratio: 3/4; }
+.tv-hero .fade { position: absolute; inset: 0; background: linear-gradient(rgba(12,12,12,.15), rgba(12,12,12,.7) 45%, var(--bg) 70%); pointer-events: none; }
+.tv-hero .in { position: relative; margin-top: -90px; }
+.tv-hero h1 { font-size: 34px; line-height: 1.2; margin: 6px 0 10px; letter-spacing: .02em; }
+.tv-hero .you { display: inline-block; margin-top: 4px; padding: 6px 12px; border: 1px solid #4a3d12; background: rgba(255,210,31,.07); border-radius: 10px; font-size: 13px; }
+.tv-hero .you b { color: var(--y); margin-left: 6px; }
+.tile { position: relative; overflow: hidden; border-radius: 6px; background: var(--a, #222); }
+.tile span { position: absolute; inset: 0; padding: 4px; font-size: 9px; color: rgba(255,255,255,.4); overflow: hidden; }
+.tile img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.mini { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; margin-top: 16px; }
+.mini div { background: rgba(26,26,26,.85); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; min-width: 0; }
+.mini b { display: block; font-size: 18px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mini span { color: var(--muted); font-size: 11.5px; }
+.split { display: flex; height: 34px; border-radius: 10px; overflow: hidden; font-size: 12.5px; font-weight: 700; margin-bottom: 14px; }
+.split div { display: flex; align-items: center; padding: 0 10px; white-space: nowrap; min-width: 64px; }
+.split .p { background: #ff6aa2; color: #2a0a17; } .split .j { background: var(--y); color: var(--y-ink); justify-content: flex-end; }
+.stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px; }
+.st2 { background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; }
+.st2 b { display: block; font-size: 22px; color: var(--y); }
+.st2 span { color: var(--muted); font-size: 12px; }
+.cloud { display: flex; flex-wrap: wrap; gap: 4px 12px; align-items: baseline; line-height: 1.25; }
+.cloud .kw { font-weight: 800; cursor: pointer; }
+.hid { margin-top: 12px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; font-size: 12px; color: var(--muted); }
+.hid button { border: 1px dashed var(--line); background: none; color: var(--muted); border-radius: 999px; padding: 2px 10px; font-size: 12px; }
+.dims { display: flex; gap: 10px; overflow-x: auto; scroll-snap-type: x mandatory; margin: 0 -14px; padding: 0 14px 6px; scrollbar-width: none; }
+.dims::-webkit-scrollbar { display: none; }
+.dims .dim { flex: 0 0 78%; scroll-snap-align: center; }
+.swipe { color: var(--faint); font-size: 11.5px; margin-top: 6px; }
+.dim { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
+.dim h3 { margin: 0 0 8px; font-size: 14px; }
+.bars { display: grid; gap: 6px; }
+.br { display: grid; grid-template-columns: 76px 1fr 40px; gap: 8px; align-items: center; font-size: 12.5px; }
+.bars.wide .br { grid-template-columns: 110px 1fr 44px; }
+.br .t { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.br .track2 { height: 8px; border-radius: 99px; background: #262626; overflow: hidden; }
+.br .track2 i { display: block; height: 100%; background: var(--y); border-radius: 99px; }
+.br .v { color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+.pairs { display: grid; gap: 12px; margin-top: 6px; }
+.pair { display: grid; grid-template-columns: 76px 1fr 76px; gap: 8px; align-items: center; font-size: 12px; }
+.pair .r { text-align: right; }
+.pair .tk { position: relative; height: 6px; border-radius: 99px; background: linear-gradient(90deg, #3a3a3a, #262626, #3a3a3a); }
+.pair .kn { position: absolute; top: 50%; width: 14px; height: 14px; border-radius: 50%; background: var(--y); transform: translate(-50%, -50%); box-shadow: 0 0 0 3px rgba(255,210,31,.2); }
+.pod { display: grid; grid-template-columns: 28px 1fr; gap: 10px; align-items: center; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px; margin-bottom: 8px; }
+.pod .n { width: 28px; height: 28px; border-radius: 50%; background: var(--y); color: var(--y-ink); display: grid; place-items: center; font-weight: 800; }
+.pod .name { font-weight: 700; } .pod .c { color: var(--muted); font-size: 12px; }
+.pod .ws { grid-column: 1 / -1; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+.pod .ws .tile { aspect-ratio: 3/4; display: block; }
+.rest .row { display: flex; gap: 10px; padding: 7px 4px; border-bottom: 1px solid #1d1d1d; font-size: 13.5px; }
+.rest .row .n { color: var(--faint); width: 20px; } .rest .row .c { margin-left: auto; color: var(--muted); }
+.covers { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 6px; scroll-snap-type: x mandatory; -webkit-overflow-scrolling: touch; }
+.covers::-webkit-scrollbar { display: none; }
+.cov a { text-decoration: none; }
+.cov { flex: 0 0 112px; scroll-snap-align: start; text-decoration: none; position: relative; }
+.cov .im { position: relative; aspect-ratio: 3/4; border-radius: 10px; overflow: hidden; background: #1d1d1d; }
+.cov .im span { position: absolute; inset: 0; padding: 8px; font-size: 11px; color: var(--faint); }
+.cov .im img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.cov .t { font-size: 12px; margin-top: 5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.cov .rt { font-size: 11px; color: var(--y); }
+.cov .rm { position: absolute; top: 4px; right: 4px; width: 24px; height: 24px; border-radius: 50%; border: 0; background: rgba(0,0,0,.7); color: #fff; font-size: 13px; z-index: 2; }
+.addcov { flex: 0 0 112px; aspect-ratio: 3/4; border: 1px dashed #3a3a3a; border-radius: 10px; background: none; color: var(--muted); font-size: 13px; }
+.res { display: flex; flex-direction: column; gap: 6px; margin-top: 10px; }
+.res button { text-align: left; background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 9px 12px; font-size: 13px; color: var(--ink); }
+.res button.on { border-color: var(--y); }
+.cl { position: relative; border-radius: 16px; overflow: hidden; border: 1px solid var(--line); margin-bottom: 10px; min-height: 150px; }
+.cl .strip { position: absolute; inset: 0; display: grid; grid-template-columns: repeat(4, 1fr); }
+.cl .strip div { position: relative; background: #1b1b1b; }
+.cl .strip img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.cl .shade { position: absolute; inset: 0; background: linear-gradient(90deg, rgba(12,12,12,.95), rgba(12,12,12,.7) 60%, rgba(12,12,12,.35)); }
+.cl .in { position: relative; padding: 14px 16px; }
+.cl .nm { font-size: 18px; font-weight: 800; }
+.cl .nm small { display: block; font-size: 11.5px; color: var(--y); font-weight: 400; letter-spacing: .1em; margin-top: 2px; }
+.cl .bar1 { height: 4px; border-radius: 99px; background: rgba(255,255,255,.12); margin: 10px 0; width: 70%; }
+.cl .bar1 i { display: block; height: 100%; border-radius: 99px; background: var(--y); }
+.cl .sig { font-size: 12.5px; color: #ddd7ca; } .cl .sig b { color: var(--y); font-weight: 600; }
+.cl .au { font-size: 12px; color: var(--muted); margin-top: 6px; }
+.lonely { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.lonely span { font-size: 11.5px; border: 1px solid var(--line); border-radius: 999px; padding: 1px 9px; color: var(--muted); }
+.drift h3 { font-size: 14px; margin: 14px 0 8px; }
+.db { margin-bottom: 10px; }
+.db .hd { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 4px; }
+.db .hd span { color: var(--muted); font-variant-numeric: tabular-nums; } .db .hd em { font-style: normal; color: var(--y); margin-left: 6px; }
+.db .tr { position: relative; height: 10px; border-radius: 99px; background: #222; }
+.db .seg { position: absolute; top: 3px; height: 4px; background: rgba(255,210,31,.5); border-radius: 99px; }
+.db .dot { position: absolute; top: 50%; width: 10px; height: 10px; border-radius: 50%; transform: translate(-50%, -50%); }
+.db .dot.e { border: 2px solid var(--y); background: var(--bg); } .db .dot.r { background: var(--y); }
+.down .db .seg { background: rgba(138,147,166,.5); } .down .db .dot.e { border-color: var(--seen); } .down .db .dot.r { background: var(--seen); }
+.aibox { background: radial-gradient(circle at 80% 0%, rgba(255,210,31,.12), transparent 60%), var(--panel); border: 1px solid #3a3215; border-radius: 18px; padding: 18px 16px; }
+.aibox .steps3 { margin: 12px 0 14px; padding-left: 18px; color: #cfc9bd; font-size: 13px; line-height: 1.8; }
+.aibox .row { gap: 10px; }
+.aibox .row .btn { flex: 1; }
+.share { background: linear-gradient(150deg, #1c1a12, #0f0f0f 60%); border: 1px solid #3a3215; border-radius: 18px; padding: 20px 18px; }
+.share .s1 { font-size: 11px; letter-spacing: .2em; color: var(--y); }
+.share .s2 { font-size: 26px; font-weight: 900; margin: 8px 0; }
+.share .s3 { color: #ddd7ca; line-height: 1.7; }
+.share .chips { display: flex; flex-wrap: wrap; gap: 6px; margin: 12px 0; }
+.share .chips span { font-size: 12px; border: 1px solid #4a3d12; color: var(--y); border-radius: 999px; padding: 1px 10px; }
+.share .s4 { display: flex; flex-wrap: wrap; gap: 16px; font-size: 16px; font-weight: 800; }
+.share .s4 small { display: block; font-size: 11px; color: var(--muted); font-weight: 400; }
+.vbtn { background: none; border: 0; padding: 0; color: inherit; cursor: pointer; text-align: left; }
+.vbtn .caret { font-size: 14px; color: var(--muted); margin-left: 4px; }
+
+dialog .pop { position: absolute; }
+.it-top .im { display: block; }
+.res button .muted { font-size: 11.5px; }
 /* ---------- 设置 ---------- */
 .sec { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 13px 14px; margin-bottom: 12px; }
 .sec h4 { margin: 0 0 10px; font-size: 14.5px; display: flex; align-items: center; gap: 8px; }
@@ -308,14 +438,15 @@ label.lb { color: var(--muted); font-size: 12px; }
 <main>
   <div class="deck" id="deck" hidden><div class="pile"><i></i><i></i><i></i></div></div>
   <div id="tasks"></div>
-  <div id="content"></div>
+  <div id="shelfView"><div id="content"></div></div>
+  <div id="tasteView" class="tv"></div>
 </main>
 
 <nav class="tabbar">
-  <button class="on" id="navShelf" onclick="goShelf()"><svg viewBox="0 0 24 24"><rect x="3.5" y="4" width="7" height="16" rx="1.5"/><rect x="13.5" y="4" width="7" height="16" rx="1.5"/></svg>书架</button>
+  <button class="on" id="navShelf" onclick="showView('shelf')"><svg viewBox="0 0 24 24"><rect x="3.5" y="4" width="7" height="16" rx="1.5"/><rect x="13.5" y="4" width="7" height="16" rx="1.5"/></svg>书架</button>
   <button id="navCal" onclick="openCal()"><svg viewBox="0 0 24 24"><path d="M5 20V13M5 9V4M12 20v-9M12 7V4M19 20v-5M19 11V4M3 13h4M10 7h4M17 15h4"/></svg>调音</button>
   <button class="cast" id="genBtn"><i class="orb"><span>✦</span></i>开卷</button>
-  <button id="navVols" onclick="openVols()"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg>往期</button>
+  <button id="navTaste" onclick="showView('taste')"><svg viewBox="0 0 24 24"><path d="M3 18c2.5 0 2.5-6 5-6s2.5 4 5 4 2.5-10 5-10 2 4 3 4"/><circle cx="18" cy="6" r="1.2"/></svg>口味谱</button>
   <button id="navSet" onclick="openSet()"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>设置</button>
 </nav>
 
@@ -358,10 +489,11 @@ label.lb { color: var(--muted); font-size: 12px; }
   <div class="dlg-b cal" id="calBody"></div>
 </dialog>
 
-<dialog id="whyDlg">
+<dialog id="itemDlg">
   <div class="grab"></div>
-  <div class="dlg-h"><h2 id="whyTitle">为何是它</h2><button class="dlg-x" onclick="closeDlg(whyDlg)">✕</button></div>
-  <div class="dlg-b"><pre class="expl" id="whyLocal"></pre></div>
+  <div class="dlg-h"><h2 id="itemNo"></h2><button class="dlg-x" onclick="closeDlg(itemDlg)">✕</button></div>
+  <div class="dlg-b" id="itemBody"></div>
+  <div class="pop" id="tagPop" hidden></div>
 </dialog>
 
 <dialog id="genDlg">
@@ -381,7 +513,7 @@ label.lb { color: var(--muted); font-size: 12px; }
   <div class="dlg-b"><div class="vols" id="volList"></div></div>
 </dialog>
 
-<div class="pop" id="tagPop" hidden></div>
+<div class="pop" id="kwPop" hidden></div>
 <div class="toast" id="toast"></div>
 
 <script>
@@ -420,12 +552,24 @@ document.querySelectorAll("dialog").forEach(d => {
 });
 // 手机返回键：先关弹出的东西，没有可关的再退出
 window.honmeiBack = function () {
-  if (!$("tagPop").hidden) { closePop(); return true; }
+  if (!$("tagPop").hidden || !$("kwPop").hidden) { closePop(); return true; }
   const open = [...document.querySelectorAll("dialog[open]")];
   if (open.length) { const d = open[open.length - 1]; d.id === "calDlg" ? closeCal() : closeDlg(d); return true; }
+  if (S.view === "taste") { showView("shelf"); return true; }
   return false;
 };
-function goShelf() { window.scrollTo({ top: 0, behavior: "smooth" }); }
+const scrollMem = { shelf: 0, taste: 0 };
+function showView(v) {
+  closePop();
+  const cur = S.view || "shelf";
+  if (v === cur) { window.scrollTo({ top: 0, behavior: "smooth" }); return; }
+  scrollMem[cur] = window.scrollY;
+  S.view = v;
+  document.body.classList.toggle("taste", v === "taste");
+  $("navShelf").classList.toggle("on", v === "shelf"); $("navTaste").classList.toggle("on", v === "taste");
+  window.scrollTo(0, scrollMem[v] || 0);
+  if (v === "taste") loadTaste();
+}
 
 /* ---------- 状态 ---------- */
 async function loadStatus() {
@@ -504,7 +648,7 @@ function startPolling() {
       if (j && j.kind === "generate" && j.status === "done") {
         if (animOn()) { dealSet(j.result.batch_id, new Set()); S.justDealt = j.result.batch_id; S.filter = "all"; }
         await loadBatch(j.result.batch_id);
-        window.scrollTo({ top: 0, behavior: "smooth" });
+        if (S.view !== "taste") window.scrollTo({ top: 0, behavior: "smooth" });
       }
       else if (!S.batch) render();
     }
@@ -542,7 +686,7 @@ function render() {
   const n = (f) => b.items.filter(it => f === "none" ? !it.feedback : it.feedback === f).length;
   c.innerHTML = `
     <div class="head">
-      <div><h2>Vol. <span>${b.vol ?? b.id}</span></h2><div class="sub">${fmtTime(b.created_at)}${m.mode && m.mode !== "balance" ? ` · ${esc(m.mode_name)}` : ""} · ${engine} · ${m.pool ?? "?"} 本里挑出 ${b.items.length} 本</div></div>
+      <div><button class="vbtn" onclick="openVols()"><h2>Vol. <span>${b.vol ?? b.id}</span><i class="caret">▾</i></h2></button><div class="sub">${fmtTime(b.created_at)}${m.mode && m.mode !== "balance" ? ` · ${esc(m.mode_name)}` : ""} · ${engine} · ${m.pool ?? "?"} 本里挑出 ${b.items.length} 本</div></div>
       <div class="tabs">
         ${[["all", "全部", b.items.length], ["none", "未表态", n("none")], ["want", "心动", n("want")]].map(([k, t, c]) =>
           `<button class="${S.filter === k ? "on" : ""}" onclick="setFilter('${k}')">${t} ${c}</button>`).join("")}
@@ -592,8 +736,7 @@ function reveal(pos) {
   if (el) {
     const f = el.querySelector(".flip");
     f.classList.add("opening"); f.classList.remove("down");
-    setTimeout(() => { f.classList.remove("opening"); f.classList.add("unfold"); el.classList.remove("is-down"); }, 560);
-    setTimeout(() => f.classList.remove("unfold"), 950);
+    setTimeout(() => { f.classList.remove("opening"); el.classList.remove("is-down"); }, 560);
     const c = el.querySelector(".card");
     if (c.classList.contains("r-gold") || c.classList.contains("r-rainbow")) { c.classList.remove("just"); void c.offsetWidth; c.classList.add("just"); }
     try { App && App.tick && App.tick(); } catch (e) {}
@@ -608,52 +751,77 @@ function setFilter(f) { S.filter = f; render(); }
 
 function card(it, idx = 0, rar = {}) {
   const fb = it.feedback, r = rar[it.pos] || "", down = isDown(it);
-  const bl = new Set(it.blocked || []);
+  const bl = (it.blocked || []).length;
   const dealing = S.justDealt === S.batch.id;
-  const read = fb === "seen" || fb === "seen_like";
-  const btn = (l) => `<button class="${l} ${fb === l || (l === "seen" && read) ? "on" : ""}" onclick="feedback(${it.pos}, '${l}')">${LABEL[l]}</button>`;
-  const seenQ = read ? `<div class="seenq"><span>还喜欢吗？</span><button class="${fb === "seen_like" ? "on" : ""}" onclick="feedback(${it.pos}, '${fb === "seen_like" ? "seen" : "seen_like"}', true)">${fb === "seen_like" ? "♥ 喜欢" : "♡ 喜欢"}</button></div>` : "";
+  const q = (l, txt) => `<button class="${l} ${fb === l ? "on" : ""}" onclick="feedback(${it.pos}, '${l}')">${txt}</button>`;
+  const mark = fb && fb !== "want" && fb !== "skip" ? `<span class="fbm ${fb}">${LABEL[fb]}</span>` : "";
   return `<div class="slot${dealing ? " deal" : ""}${down ? " is-down" : ""}"${dealing ? ` style="--d:${idx * 70}ms"` : ""} id="card-${it.pos}"><div class="flip${down ? " down" : ""}">
-  <div class="card ${fb ? "fb-" + fb : ""}${r ? " r-" + r : ""}${bl.size ? " is-blocked" : ""}${S.shine === it.pos ? " just" : ""}">
-    <a class="cover" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">
+  <div class="card ${fb ? "fb-" + fb : ""}${r ? " r-" + r : ""}${bl ? " is-blocked" : ""}${S.shine === it.pos ? " just" : ""}">
+    <button class="cover" onclick="openItem(${it.pos})" aria-label="${esc(it.core_title)}">
       <div class="ph">${esc(it.core_title)}</div>
       <img loading="lazy" src="${esc(it.cover)}" alt="" onerror="this.remove()">
-      <span class="pos">${it.pos}</span><span class="route">${esc(it.reason.route_name || it.route)}</span>
-      ${r ? `<span class="rar">${RAR_NAME[r]}</span>` : ""}
-    </a>
-    <div class="body">
-      <a class="title" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">${esc(it.core_title)}</a>
-      <div class="meta">${esc((it.authors || []).join("、") || "作者未知")}${it.parodies?.length ? " · " + esc(it.parodies[0]) : ""}</div>
-      <div class="reason">${esc(it.reason.text || "")}</div>
-      <div class="tags">${(it.tags || []).slice(0, 4).map(t => `<button class="tag${bl.has(t) || blockedHas(t) ? " bl" : ""}" data-tag="${esc(t)}">${esc(t)}</button>`).join("")}</div>
-      ${bl.size ? `<div class="blnote">已拉黑「${esc([...bl].join("、"))}」</div>` : ""}
-      <button class="why" onclick="why(${it.pos})">为何是它 →</button>
-      <div class="acts">${btn("want")}${btn("skip")}${btn("dislike")}${btn("seen")}</div>${seenQ}
+      <span class="pos">${it.pos}</span>${r ? `<span class="rar">${RAR_NAME[r]}</span>` : ""}${mark}
+    </button>
+    <div class="foot">
+      <div class="title" onclick="openItem(${it.pos})">${esc(it.core_title)}</div>
+      <div class="meta">${esc((it.authors || []).join("、") || "作者未知")}</div>
+      <div class="quick">${q("want", "♥ 心动")}${q("skip", "略过")}<button class="more" onclick="openItem(${it.pos})" aria-label="更多">⋯</button></div>
     </div></div>
   <button class="back" onclick="reveal(${it.pos})" aria-label="翻开第 ${it.pos} 本"><svg class="bk-star" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0C12.9 7.6 16.4 11.1 24 12 16.4 12.9 12.9 16.4 12 24 11.1 16.4 7.6 12.9 0 12 7.6 11.1 11.1 7.6 12 0Z"/></svg><span class="bk-no">No.${it.pos}</span><span class="bk-tap">轻点翻开</span></button>
   </div></div>`;
 }
 
-async function feedback(pos, label, exact = false) {
+/* ---------- 详情（底部滑出） ---------- */
+let ITEM = null;
+function openItem(pos) {
+  ITEM = pos; closePop();
+  renderItem(); $("itemBody").scrollTop = 0;
+  openDlg(itemDlg);
+}
+function renderItem() {
+  const it = S.batch && S.batch.items.find(x => x.pos === ITEM); if (!it) return;
+  const fb = it.feedback, r = rarities(S.batch.items)[it.pos] || "";
+  const bl = new Set(it.blocked || []);
+  const btn = (l) => `<button class="${l} ${fb === l ? "on" : ""}" onclick="feedback(${it.pos}, '${l}', false, true)">${LABEL[l]}</button>`;
+  const meta = [(it.authors || []).join("、") || "作者未知", ...(it.parodies || []).slice(0, 2)].map(esc).join(" · ");
+  $("itemNo").textContent = `No.${it.pos}`;
+  $("itemBody").innerHTML = `
+    <div class="it-top">
+      <a class="im" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer"><div class="ph">${esc(it.core_title)}</div><img src="${esc(it.cover)}" alt="" onerror="this.remove()"></a>
+      <div><h3>${esc(it.core_title)}</h3><div class="meta">${meta}</div>
+        <div class="badges"><span>${esc(it.reason.route_name || it.route)}</span>${r ? `<span>${RAR_NAME[r]}</span>` : ""}${it.pages ? `<span>${it.pages} 页</span>` : ""}</div></div>
+    </div>
+    ${it.reason.text ? `<div class="reason">${esc(it.reason.text)}</div>` : ""}
+    <div class="tags">${(it.tags || []).slice(0, 14).map(t => `<button class="tag${bl.has(t) || blockedHas(t) ? " bl" : ""}" data-tag="${esc(t)}">${esc(t)}</button>`).join("")}</div>
+    ${bl.size ? `<div class="blnote">已拉黑「${esc([...bl].join("、"))}」</div>` : `<div class="muted" style="font-size:11.5px">点标签可以拉黑，以后不推这类。</div>`}
+    <div class="acts5">${btn("want")}${btn("skip")}${btn("dislike")}${btn("seen")}${btn("seen_like")}</div>
+    <details class="why" id="itWhy"><summary>为何是它</summary><pre class="expl" id="itWhyT">翻找中…</pre></details>
+    <div class="go"><a class="btn y" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">去禁漫看 →</a></div>`;
+  const d = $("itWhy");
+  d.ontoggle = async () => {
+    if (!d.open || d.dataset.done) return; d.dataset.done = 1;
+    try { const x = await api(`/api/explain/${S.batch.id}/${it.pos}`); $("itWhyT").textContent = x.local; }
+    catch (e) { $("itWhyT").textContent = e.message; d.dataset.done = ""; }
+  };
+}
+
+async function feedback(pos, label, exact = false, fromSheet = false) {
   const it = S.batch.items.find(x => x.pos === pos);
-  const same = it.feedback === label || (label === "seen" && it.feedback === "seen_like");
-  const next = exact ? label : same ? null : label;
+  const next = exact ? label : it.feedback === label ? null : label;
   try {
     await api("/api/feedback", { method: "POST", body: JSON.stringify({ batch_id: S.batch.id, pos, label: next }) });
     it.feedback = next;
     S.shine = (next === "want" || next === "seen_like") ? pos : null;
     const y = window.scrollY; render(); window.scrollTo(0, y); S.shine = null;
+    if (itemDlg.open && ITEM === pos) {
+      const open = $("itWhy")?.open, txt = $("itWhyT")?.textContent;
+      renderItem();
+      if (open) { $("itWhy").dataset.done = 1; $("itWhyT").textContent = txt; $("itWhy").open = true; }
+    }
+    try { App && App.tick && App.tick(); } catch (e) {}
     loadStatus();
     toast(next ? `记下了：${LABEL[next].replace("♥ ", "")}` : "已撤销");
   } catch (e) { toast(e.message); }
-}
-
-async function why(pos) {
-  $("whyTitle").textContent = `No.${pos}　为何是它`;
-  $("whyLocal").textContent = "翻找中…";
-  openDlg(whyDlg);
-  try { const r = await api(`/api/explain/${S.batch.id}/${pos}`); $("whyLocal").textContent = r.local; }
-  catch (e) { $("whyLocal").textContent = e.message; }
 }
 
 /* ---------- 往期 ---------- */
@@ -746,9 +914,9 @@ async function login(site, uid, pid, bid) {
   } finally { if (btn && btn.isConnected) { btn.disabled = false; btn.textContent = label; } }
 }
 async function logout(site) { await api("/api/logout/" + site, { method: "POST" }); await loadStatus(); if (!S.batch) render(); }
-async function doImport(site) { closeDlg(setDlg); try { await runJob("/api/import/" + site); window.scrollTo({ top: 0, behavior: "smooth" }); } catch (e) { toast(e.message); } }
+async function doImport(site) { closeDlg(setDlg); if (S.view === "taste") showView("shelf"); try { await runJob("/api/import/" + site); window.scrollTo({ top: 0, behavior: "smooth" }); } catch (e) { toast(e.message); } }
 async function generate() {
-  closeDlg(genDlg);
+  closeDlg(genDlg); if (S.view === "taste") showView("shelf");
   const g = $("genBtn"); g.classList.remove("go"); void g.offsetWidth; g.classList.add("go");
   if (animOn()) { $("deck").hidden = false; g.classList.add("busy"); }
   window.scrollTo({ top: 0, behavior: "smooth" });
@@ -756,16 +924,22 @@ async function generate() {
 }
 /* ---------- 拉黑标签 ---------- */
 function blockedHas(t) { return ((S.settings && S.settings.blocked_tags) || []).includes(t); }
-function closePop() { $("tagPop").hidden = true; }
+function closePop() { $("tagPop").hidden = true; $("kwPop").hidden = true; }
+function placePop(pop, btn) {
+  pop.hidden = false;
+  const host = pop.parentElement.tagName === "DIALOG" ? pop.parentElement.getBoundingClientRect() : { left: 0, top: 0, width: innerWidth };
+  const r = btn.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
+  const left = Math.max(10, Math.min(host.width - w - 10, r.left - host.left + r.width / 2 - w / 2));
+  const above = r.top - host.top - h - 8;
+  pop.style.left = left + "px";
+  pop.style.top = (above > 10 ? above : r.bottom - host.top + 8) + "px";
+}
 function tagPop(btn) {
   const t = btn.dataset.tag, pop = $("tagPop"), on = blockedHas(t);
   pop.innerHTML = on
     ? `<div>「${esc(t)}」已经拉黑了。</div><div class="row"><button class="btn sm ghost" onclick="closePop()">算了</button><button class="btn sm" data-unblock="1">取消拉黑</button></div>`
     : `<div>以后不推带「${esc(t)}」的作品？</div><div class="row"><button class="btn sm ghost" onclick="closePop()">算了</button><button class="btn sm y" data-block="1">拉黑</button></div>`;
-  pop.hidden = false;
-  const r = btn.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
-  pop.style.left = Math.max(10, Math.min(innerWidth - w - 10, r.left + r.width / 2 - w / 2)) + "px";
-  pop.style.top = (r.top - h - 8 > 60 ? r.top - h - 8 : r.bottom + 8) + "px";
+  placePop(pop, btn);
   pop.querySelector("[data-block],[data-unblock]").onclick = () => setBlocked(t, !on);
 }
 async function setBlocked(t, on) {
@@ -775,7 +949,7 @@ async function setBlocked(t, on) {
     S.settings = { ...(S.settings || {}), blocked_tags: r.blocked_tags };
     toast(on ? `已拉黑「${t}」，以后不推这类` : `已取消拉黑「${t}」`);
     renderBlocked();
-    if (S.batch) { const y = window.scrollY; S.batch = await api("/api/batches/" + S.batch.id); render(); window.scrollTo(0, y); }
+    if (S.batch) { const y = window.scrollY; S.batch = await api("/api/batches/" + S.batch.id); render(); window.scrollTo(0, y); if (itemDlg.open) renderItem(); }
   } catch (e) { toast(e.message); }
 }
 function renderBlocked() {
@@ -784,11 +958,14 @@ function renderBlocked() {
   $("blockedHint").textContent = L.length ? "点 × 取消拉黑。" : "点卡片上的标签就能拉黑，带这个标签的作品以后不再推荐。";
 }
 document.addEventListener("click", (e) => {
-  const tg = e.target.closest(".card .tag");
+  const tg = e.target.closest("#itemBody .tag");
   if (tg) { e.preventDefault(); return tagPop(tg); }
-  if (!e.target.closest("#tagPop")) closePop();
+  const kw = e.target.closest("[data-kw]");
+  if (kw) { e.preventDefault(); return kwPop(kw); }
+  if (!e.target.closest(".pop")) closePop();
 });
 addEventListener("scroll", closePop, { passive: true });
+$("itemBody").addEventListener("scroll", closePop, { passive: true });
 
 /* ---------- 开卷口味 ---------- */
 const MODES = [
@@ -859,6 +1036,186 @@ document.addEventListener("click", (e) => {
   const m = location.hash.match(/batch=(\d+)/);
   await loadBatch(m ? m[1] : null);
 })();
+
+/* ---------- 口味谱 ---------- */
+let TV = null, tvLoading = false;
+const pct = (x) => Math.round((x || 0) * 100) + "%";
+const HUES = ["#4a3a12", "#2f2a40", "#123a3a", "#3a1f2a", "#1f3320", "#3a2a1a"];
+const hue = (t) => HUES[[...String(t)].reduce((a, c) => (a * 31 + c.charCodeAt(0)) >>> 0, 7) % HUES.length];
+const tile = (b) => `<div class="tile" style="--a:${hue(b.title)}"><span>${esc(b.title)}</span><img loading="lazy" src="${esc(b.cover)}" alt="" onerror="this.remove()"></div>`;
+const wlink = (b, inner, cls = "") => `<a class="${cls}" href="${esc(b.url)}" target="_blank" rel="noopener noreferrer"${b.site === "pica" ? ` data-copy="${esc(b.title)}"` : ""}>${inner}</a>`;
+const cov = (b, extra = "", rm = "") => `<div class="cov">${rm}${wlink(b, `<div class="im"><span>${esc(b.title)}</span><img loading="lazy" src="${esc(b.cover)}" alt="" onerror="this.remove()"></div><div class="t">${esc(b.title)}</div>${extra}`)}</div>`;
+
+async function loadTaste() {
+  const v = $("tasteView");
+  if (!TV) v.innerHTML = `<div class="wait" style="margin:80px 0;text-align:center;color:var(--y)">正在把 ${S.status ? S.status.sites.pica.favorites + S.status.sites.jm.favorites : ""} 本收藏摊开……</div>`;
+  if (tvLoading) return; tvLoading = true;
+  try { TV = await api("/api/insights"); const y = window.scrollY; renderTaste(); if (S.view === "taste") window.scrollTo(0, y); }
+  catch (e) { if (!TV) v.innerHTML = `<p class="err">${esc(e.message)}</p>`; }
+  finally { tvLoading = false; }
+}
+function bars(list, key = "share", label = "tag", fmt = pct, cls = "") {
+  const m = Math.max(...list.map(x => x[key]), 1e-9);
+  return `<div class="bars ${cls}">${list.map(x => `<div class="br"><span class="t">${esc(x[label])}</span><div class="track2"><i style="width:${(100 * x[key] / m).toFixed(1)}%"></i></div><span class="v">${fmt(x[key])}</span></div>`).join("")}</div>`;
+}
+function radar(axes) {
+  const keys = Object.keys(axes), n = keys.length, R = 128, cx = 200, cy = 180;
+  const max = Math.max(0.4, ...Object.values(axes));
+  const pt = (i, r) => [cx + r * Math.sin(2 * Math.PI * i / n), cy - r * Math.cos(2 * Math.PI * i / n)];
+  let g = "";
+  for (const f of [0.25, 0.5, 0.75, 1]) g += `<polygon points="${keys.map((_, i) => pt(i, R * f).join(",")).join(" ")}" fill="none" stroke="#2a2a2a"/>`;
+  keys.forEach((k, i) => { const [x, y] = pt(i, R); g += `<line x1="${cx}" y1="${cy}" x2="${x}" y2="${y}" stroke="#2a2a2a"/>`;
+    const [lx, ly] = pt(i, R + 24); g += `<text x="${lx}" y="${ly}" fill="#bdb7aa" font-size="15" text-anchor="middle" dominant-baseline="middle">${esc(k)}</text>`; });
+  g += `<polygon points="${keys.map((k, i) => pt(i, R * axes[k] / max).join(",")).join(" ")}" fill="rgba(255,210,31,.25)" stroke="#ffd21f" stroke-width="2"/>`;
+  keys.forEach((k, i) => { const [x, y] = pt(i, R * axes[k] / max); g += `<circle cx="${x}" cy="${y}" r="4" fill="#ffd21f"/>`; });
+  return `<svg viewBox="0 0 400 360" width="100%" role="img" aria-label="倾向雷达">${g}</svg>`;
+}
+function pairs(a) {
+  const P = [["纯爱", "禁忌"], ["被支配", "支配"], ["丰满", "娇小"], ["剧情", "重口"]].filter(([l, r]) => l in a && r in a);
+  return `<div class="pairs">${P.map(([l, r]) => {
+    const t = (a[l] || 0) + (a[r] || 0) || 1, pos = 100 * (a[r] || 0) / t;
+    return `<div class="pair"><span>${l} ${pct(a[l])}</span><div class="tk"><div class="kn" style="left:${pos.toFixed(1)}%"></div></div><span class="r">${pct(a[r])} ${r}</span></div>`;
+  }).join("")}</div>`;
+}
+function driftBlock(rising, falling) {
+  if (!rising.length && !falling.length) return `<p class="muted">早期和近期的收藏口味差不多，没有明显变化。</p>`;
+  const max = Math.max(...[...rising, ...falling].flatMap(d => [d.early, d.recent]), 0.1);
+  const row = (d) => {
+    const e = 100 * d.early / max, r = 100 * d.recent / max, delta = Math.round((d.recent - d.early) * 100);
+    return `<div class="db"><div class="hd"><b>${esc(d.tag)}</b><span>${pct(d.early)} → ${pct(d.recent)}<em>${delta > 0 ? "+" : ""}${delta}</em></span></div>
+      <div class="tr"><div class="seg" style="left:${Math.min(e, r).toFixed(1)}%;width:${Math.abs(r - e).toFixed(1)}%"></div><div class="dot e" style="left:${e.toFixed(1)}%"></div><div class="dot r" style="left:${r.toFixed(1)}%"></div></div></div>`;
+  };
+  return `<div class="drift"><div class="up"><h3>越来越爱</h3>${rising.slice(0, 5).map(row).join("") || `<p class="muted">没有明显上升的标签</p>`}</div>
+    <div class="down"><h3>渐渐淡了</h3>${falling.slice(0, 5).map(row).join("") || `<p class="muted">没有明显下降的标签</p>`}</div></div>
+    <p class="muted">按收藏先后，比较最早 25% 和最新 25%；空心点是早期，实心点是近期。</p>`;
+}
+const CL_NAMES = ["主旋律", "第二人格", "隐藏面", "小众心头好", "偶尔想起", "冷门角落", "边角料", "边角料"];
+function clusterCard(c, i) {
+  const strip = (c.works || []).slice(0, 4).map(b => `<div><img loading="lazy" src="${esc(b.cover)}" alt="" onerror="this.remove()"></div>`).join("");
+  return `<div class="cl"><div class="strip">${strip}</div><div class="shade"></div><div class="in">
+    <div class="nm">${esc(c.name)}<small>${CL_NAMES[i] || ""} · ${pct(c.share)}</small></div>
+    <div class="bar1"><i style="width:${(c.share * 100).toFixed(1)}%"></i></div>
+    ${c.signature && c.signature.length ? `<div class="sig">这一簇格外多见：<b>${c.signature.map(esc).join("、")}</b></div>` : ""}
+    <div class="au">${esc((c.authors || []).join(" · "))}</div></div></div>`;
+}
+function authorsBlock(list) {
+  const top = list.slice(0, 3), rest = list.slice(3, 8);
+  return top.map((a, i) => `<div class="pod"><span class="n">${i + 1}</span><div style="min-width:0"><div class="name">${esc(a.name)}</div><div class="c">收了 ${a.count} 本</div></div>
+      <div class="ws">${(a.works || []).map(b => wlink(b, tile(b))).join("")}</div></div>`).join("")
+    + (rest.length ? `<div class="rest">${rest.map((a, i) => `<div class="row"><span class="n">${i + 4}</span><span>${esc(a.name)}</span><span class="c">${a.count} 本</span></div>`).join("")}</div>` : "");
+}
+
+function renderTaste() {
+  const D = TV, v = $("tasteView");
+  if (!D || D.empty) { v.innerHTML = `<section><div class="kicker">口味谱</div><h2>还没有收藏</h2><p class="lead">先登录并导入哔咔或禁漫的收藏，这里会画出你的口味。</p><button class="btn y" onclick="openSet()">去导入</button></section>`; return; }
+  const ps = D.per_site || {}, topTags = D.top_tags.slice(0, 24), t0 = topTags[0], topAuthor = D.authors[0];
+  const maxShare = t0?.share || 1;
+  const cloud = topTags.map((t, i) => `<span class="kw" data-kw="${esc(t.tag)}" style="font-size:${(14 + 30 * Math.sqrt(t.share / maxShare)).toFixed(0)}px;color:${i < 3 ? "var(--y)" : i < 8 ? "#f4f1e8" : "#8f8a80"}">${esc(t.tag)}</span>`).join("");
+  const hid = D.hidden_tags || [];
+  const dmax = D.dimensions.reduce((m, x) => Math.max(m, x.top[0]?.share || 0), 0);
+  const sec = [
+    `<div class="tv-hero"><div class="mosaic">${(D.mosaic || []).slice(0, 18).map(tile).join("")}</div><div class="fade"></div>
+      <div class="in"><div class="kicker">HONMEI · 口味谱</div><h1>你的<em>口味谱</em></h1>
+      <p class="lead">${D.total} 本收藏，${D.distinct_authors} 位作者。全部在这台手机上算出来，不上传。</p>
+      ${D.total < 20 ? `<div class="note thin">只有 ${D.total} 本收藏，样本还少，下面的结论可能不太准。</div>` : ""}
+      <div class="mini"><div><b>${D.total}</b><span>本收藏</span></div><div><b>${D.clusters.length}</b><span>种口味</span></div>
+        <div><b>${esc(t0?.tag || "—")}</b><span>最常见的词</span></div><div><b>${esc(topAuthor?.name || "—")}</b><span>收得最多的作者</span></div></div></div></div>`,
+    `<div class="kicker">一路收藏</div><h2>你一共把 <em>${D.total}</em> 本<br>放进了收藏夹</h2>
+     <div class="split">${ps.pica ? `<div class="p" style="flex:${ps.pica} 1 0">哔咔 ${ps.pica}</div>` : ""}${ps.jm ? `<div class="j" style="flex:${ps.jm} 1 0">禁漫 ${ps.jm}</div>` : ""}</div>
+     <div class="stats">
+      <div class="st2"><b>${D.distinct_authors}</b><span>位作者</span></div>
+      <div class="st2"><b>${D.repeat_authors}</b><span>位作者收了不止一本</span></div>
+      <div class="st2"><b>${pct(D.long_share)}</b><span>是长篇</span></div>
+      <div class="st2"><b>${pct(D.color_share)}</b><span>是全彩</span></div>
+      <div class="st2"><b>${D.both_sites}</b><span>本两边都收藏了</span></div>
+      <div class="st2"><b>${D.feedback?.want || 0}</b><span>本在书架上心动过</span></div></div>`,
+    `<div class="kicker">口味关键词</div><h2>翻来覆去，<br>你总在找 <em>${esc(t0?.tag || "")}</em></h2><div class="cloud">${cloud}</div>
+     <p class="muted" style="margin-top:14px">字越大，在收藏里出现得越多：${esc(t0?.tag || "")} 出现在 ${pct(t0?.share)} 的收藏里。点一个词可以把它屏蔽，屏蔽的词不进口味谱，也不发给 AI。</p>
+     ${hid.length ? `<div class="hid">已屏蔽：${hid.map(t => `<button data-unhide="${esc(t)}">${esc(t)} ↺</button>`).join("")}</div>` : ""}`,
+    D.dimensions.length ? `<div class="kicker">拆开来看</div><h2>每个方向，<br>你最常停在哪</h2><div class="dims">${D.dimensions.map(dm => `<div class="dim"><h3>${esc(dm.name)}</h3>${bars(dm.top.slice(0, 5), "share", "tag", pct)}</div>`).join("")}</div><div class="swipe">← 左右滑动，共 ${D.dimensions.length} 个方向 →</div>` : "",
+    `<div class="kicker">倾向</div><h2>你在光谱的<em>哪一端</em></h2>${radar(D.axes)}${pairs(D.axes)}
+     <p class="muted" style="margin-top:14px">每一项是命中相关标签的收藏比例；同一本可以同时命中好几项。</p>`,
+    topAuthor ? `<div class="kicker">本命作者</div><h2><em>${esc(topAuthor.name)}</em><br>是你翻得最多的名字</h2>${authorsBlock(D.authors)}` : "",
+    `<div class="kicker">你亲手点的本命</div><h2>${D.honmei?.length ? "这几本，<br>你说是<em>本命</em>" : "哪几本，<br>是你的<em>本命</em>？"}</h2>
+     <div class="covers">${(D.honmei || []).map(b => cov(b, "", `<button class="rm" data-rm="${esc(b.site)}|${esc(b.wid)}" aria-label="不算本命了">×</button>`)).join("")}<button class="addcov" id="addBtn">＋ 添加本命</button></div>
+     <div id="addBox" hidden><input class="inp" id="addQ" placeholder="在收藏里搜标题或作者…" autocomplete="off" style="margin-top:12px;width:100%"><div class="res" id="addRes"></div></div>
+     <p class="muted" style="margin-top:12px">调音里点过“本命”的会自动出现在这里，也可以自己从收藏里挑。本命会让推荐更偏向它们。</p>`,
+    D.parodies.length ? `<div class="kicker">常去的世界</div><h2>同人里，你最常回到<br><em>${esc(D.parodies[0].name)}</em></h2>${bars(D.parodies.slice(0, 6), "count", "name", x => x + " 本", "wide")}` : "",
+    D.clusters.length ? `<div class="kicker">口味簇</div><h2>你的口味不止一种，<br>而是 <em>${D.clusters.length}</em> 种</h2>${D.clusters.map(clusterCard).join("")}
+     <p class="muted">封面是每一簇里最有代表性的几本。开卷时每一种都会照顾到。</p>` : "",
+    D.outliers?.length ? `<div class="kicker">孤例</div><h2>还有几本，<br>和谁都<em>不像</em></h2>
+     <p class="lead">它们离每一个口味簇都很远。也许是一时兴起，也许是一扇还没推开的门。</p>
+     <div class="covers">${D.outliers.map(b => cov(b, b.rare_tags?.length ? `<div class="rt">${b.rare_tags.slice(0, 2).map(esc).join(" · ")}</div>` : "")).join("")}</div>
+     <div class="lonely">${(D.lonely_tags?.examples || []).map(t => `<span>${esc(t)}</span>`).join("")}</div>
+     <p class="muted" style="margin-top:10px">${D.lonely_tags?.count || 0} 个标签只出现过一次；${D.one_book_authors || 0} 位作者你只收过一本。</p>` : "",
+    `<div class="kicker">口味的迁徙</div><h2>从早期到近期，<br>你<em>变了</em></h2>${driftBlock(D.rising, D.falling)}`,
+    `<div class="kicker">AI 侧写</div><div class="aibox"><h2 style="margin:0 0 8px">让 AI <em>读</em>一读你</h2>
+      <p class="lead" style="margin:0">把口味谱压成一段提示词，交给你常用的 AI（ChatGPT、Claude、豆包、Kimi 都行），它会写一份不超过 900 字的侧写，最后猜几件你没说过的事。</p>
+      <ol class="steps3"><li>点“复制提示词”或“发给 AI App”</li><li>在 AI 里粘贴、发送</li><li>看它怎么说你</li></ol>
+      <div class="row"><button class="btn y" id="pCopy">复制提示词</button><button class="btn" id="pShare">发给 AI App</button></div>
+      <p class="muted" id="pMsg" style="margin:10px 0 0">提示词里有口味统计和一部分作品标题（你点的本命一定在内），不含账号。</p></div>`,
+    `<div class="kicker">一句话</div><div class="share"><div class="s1">HONMEI · 口味谱</div>
+      <div class="s2">${esc(t0 ? t0.tag + "信徒" : "收藏家")}</div>
+      <div class="s3">${D.total} 本收藏里，${pct(t0?.share)} 都带着「${esc(t0?.tag || "")}」。</div>
+      <div class="chips">${topTags.slice(0, 5).map(t => `<span>${esc(t.tag)}</span>`).join("")}</div>
+      <div class="s4"><span>${D.total}<small>本收藏</small></span><span>${D.clusters.length}<small>种口味</small></span>${D.honmei?.length ? `<span>${D.honmei.length}<small>本本命</small></span>` : ""}</div></div>
+      <p class="muted" style="margin-top:12px">想分享就截这张卡片，里面没有作品名。</p>`,
+  ].filter(Boolean);
+  v.innerHTML = sec.map((h, i) => i ? `<section>${h}</section>` : h).join("");
+  wireTaste();
+}
+function wireTaste() {
+  document.querySelectorAll("[data-unhide]").forEach(b => b.onclick = () => setHidden(b.dataset.unhide, false));
+  document.querySelectorAll("[data-rm]").forEach(b => b.onclick = async (e) => {
+    e.preventDefault(); e.stopPropagation();
+    const [site, wid] = b.dataset.rm.split("|");
+    await api("/api/honmei", { method: "POST", body: JSON.stringify({ site, wid, on: false }) }); toast("不算本命了"); loadTaste();
+  });
+  $("addBtn").onclick = () => { const box = $("addBox"); box.hidden = !box.hidden; if (!box.hidden) $("addQ").focus(); };
+  let timer = null;
+  $("addQ").oninput = () => { clearTimeout(timer); timer = setTimeout(searchFav, 250); };
+  $("pCopy").onclick = () => sendPrompt(false);
+  $("pShare").onclick = () => sendPrompt(true);
+}
+function kwPop(el) {
+  const t = el.dataset.kw, pop = $("kwPop");
+  pop.innerHTML = `<div>屏蔽「${esc(t)}」？它不会再出现在口味谱和 AI 提示词里，随时可以恢复。</div><div class="row"><button class="btn sm ghost" onclick="closePop()">算了</button><button class="btn sm y" id="kwGo">屏蔽</button></div>`;
+  placePop(pop, el);
+  $("kwGo").onclick = () => { closePop(); setHidden(t, true); };
+}
+async function setHidden(t, on) {
+  try { await api("/api/report/hidden", { method: "POST", body: JSON.stringify({ tag: t, hidden: on }) }); toast(on ? `已屏蔽「${t}」` : `已恢复「${t}」`); loadTaste(); }
+  catch (e) { toast(e.message); }
+}
+async function searchFav() {
+  const q = $("addQ").value.trim(), res = $("addRes");
+  if (!q) { res.innerHTML = ""; return; }
+  const { items } = await api("/api/favorites/search?q=" + encodeURIComponent(q));
+  res.innerHTML = items.length ? items.map(b => `<button class="${b.honmei ? "on" : ""}" data-site="${esc(b.site)}" data-wid="${esc(b.wid)}" data-on="${b.honmei ? 1 : 0}">
+      ${esc(b.title)}<br><span class="muted">${SITE[b.site]}${b.authors?.length ? " · " + esc(b.authors.join("、")) : ""}${b.honmei ? " · 已是本命（点一下取消）" : ""}</span></button>`).join("")
+    : `<p class="muted">收藏里没找到“${esc(q)}”。</p>`;
+  res.querySelectorAll("button").forEach(b => b.onclick = async () => {
+    const on = b.dataset.on !== "1";
+    await api("/api/honmei", { method: "POST", body: JSON.stringify({ site: b.dataset.site, wid: b.dataset.wid, on }) });
+    toast(on ? "记为本命" : "不算本命了");
+    const q0 = $("addQ").value; await loadTaste();
+    $("addBox").hidden = false; $("addQ").value = q0; searchFav();
+  });
+}
+async function sendPrompt(share) {
+  const msg = $("pMsg");
+  try {
+    msg.textContent = "正在整理提示词……";
+    const r = await api("/api/portrait/prompt");
+    if (share) {
+      if (App && App.share) App.share(r.prompt);
+      else if (navigator.share) await navigator.share({ text: r.prompt });
+      else { await copyText(r.prompt); }
+    } else await copyText(r.prompt);
+    msg.textContent = share ? `已打开分享（${r.chars} 字），选你的 AI App 就行。` : `已复制（${r.chars} 字）。去 AI App 里粘贴、发送。`;
+    if (!share) toast("提示词已复制");
+  } catch (e) { msg.textContent = "没成功：" + (e.message || e); }
+}
 
 /* ---------- 调音 ---------- */
 const LV = [[4, "本命"], [3, "喜欢"], [2, "一般"], [1, "其实不太喜欢"]];

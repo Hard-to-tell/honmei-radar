@@ -55,8 +55,11 @@ class MainActivity : Activity() {
         }
         web.addJavascriptInterface(Bridge(), "HonmeiApp")
 
-        // 内容不压到状态栏 / 手势条下面
-        web.setOnApplyWindowInsetsListener { v, insets ->
+        // 内容不压到状态栏 / 手势条下面：WebView 自己不认 padding，所以外面包一层
+        val root = android.widget.FrameLayout(this)
+        root.setBackgroundColor(Color.parseColor("#0C0C0C"))
+        root.addView(web, android.widget.FrameLayout.LayoutParams(-1, -1))
+        root.setOnApplyWindowInsetsListener { v, insets ->
             if (Build.VERSION.SDK_INT >= 30) {
                 val b = insets.getInsets(WindowInsets.Type.systemBars() or WindowInsets.Type.displayCutout() or WindowInsets.Type.ime())
                 v.setPadding(b.left, b.top, b.right, b.bottom)
@@ -64,9 +67,10 @@ class MainActivity : Activity() {
                 @Suppress("DEPRECATION")
                 v.setPadding(insets.systemWindowInsetLeft, insets.systemWindowInsetTop, insets.systemWindowInsetRight, insets.systemWindowInsetBottom)
             }
-            insets
+            // 已经留好白了，不再往里传，免得 WebView 再留一遍
+            if (Build.VERSION.SDK_INT >= 30) WindowInsets.CONSUMED else @Suppress("DEPRECATION") insets.consumeSystemWindowInsets()
         }
-        setContentView(web)
+        setContentView(root)
         if (savedInstanceState != null) web.restoreState(savedInstanceState) else web.loadUrl("$base/")
     }
 

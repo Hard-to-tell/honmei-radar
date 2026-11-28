@@ -89,6 +89,10 @@ class Server(val svc: Service, port: Int, val token: String = newToken()) : Nano
                 val b = body(s); if (b["site"].str().isEmpty() || b["wid"].str().isEmpty()) throw HttpError(400, "缺少作品")
                 svc.setHonmei(b["site"].str(), b["wid"].str(), b["on"]?.bool() ?: true); mapOf("ok" to true)
             }
+            get && p == "/api/insights" -> honmei.algo.Insights.summary(db)
+            post && p == "/api/report/hidden" -> { val b = body(s); mapOf("hidden_tags" to honmei.algo.Insights.setHidden(db, b["tag"].str(), b["hidden"]?.bool() ?: true)) }
+            get && p == "/api/favorites/search" -> mapOf("items" to honmei.algo.Insights.searchFavorites(db, q("q")))
+            get && p == "/api/portrait/prompt" -> { val t = honmei.algo.Portrait.prompt(db); mapOf("prompt" to t, "chars" to t.length) }
             get && seg.size == 4 && seg[1] == "cover" -> return cover(seg[2], seg[3])
             else -> throw HttpError(404, "没有这个接口")
         }
