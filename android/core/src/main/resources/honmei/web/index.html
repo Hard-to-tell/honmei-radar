@@ -1,0 +1,934 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0c0c0c">
+<title>本命 HONMEI</title>
+<style>
+:root {
+  --bg: #0c0c0c; --bg2: #141414; --panel: #1a1a1a; --panel2: #222; --line: #2c2c2c;
+  --ink: #f2efe6; --muted: #9a958a; --faint: #6b665d;
+  --y: #ffd21f; --y2: #ffe36b; --y-ink: #121212; --y-soft: rgba(255,210,31,.12);
+  --want: #ffd21f; --skip: #ff5a5f; --seen: #8a93a6;
+  --radius: 14px; --nav: 62px;
+  --sat: env(safe-area-inset-top, 0px); --sab: env(safe-area-inset-bottom, 0px);
+}
+* { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+html, body { background: var(--bg); }
+body { margin: 0; color: var(--ink); overscroll-behavior-y: contain;
+  font: 14px/1.55 system-ui, -apple-system, "Noto Sans CJK SC", "PingFang SC", "Microsoft YaHei", sans-serif; }
+a { color: inherit; }
+button, select, input { font: inherit; color: inherit; }
+::selection { background: var(--y); color: var(--y-ink); }
+
+/* ---------- 顶栏 ---------- */
+header { position: sticky; top: 0; z-index: 20; background: rgba(12,12,12,.9); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--line); padding-top: var(--sat); }
+.bar { padding: 10px 16px; display: flex; align-items: center; gap: 10px; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.logo { width: 32px; height: 32px; border-radius: 9px; background: var(--y); color: var(--y-ink);
+  display: grid; place-items: center; font-weight: 900; font-size: 19px; }
+.word { display: flex; flex-direction: column; line-height: 1.05; }
+.word b { font-size: 16px; letter-spacing: .14em; }
+.word small { color: var(--muted); font-size: 10.5px; letter-spacing: .04em; }
+.spacer { flex: 1; }
+.stat { color: var(--muted); font-size: 12px; text-align: right; line-height: 1.35; }
+.stat b { color: var(--ink); font-weight: 600; }
+
+.btn { border: 1px solid var(--line); background: var(--panel); border-radius: 12px; padding: 9px 16px; cursor: pointer; transition: border-color .15s, background .15s, transform .08s; white-space: nowrap; }
+.btn:active { transform: scale(.97); background: var(--panel2); }
+.btn.y { background: var(--y); color: var(--y-ink); border-color: var(--y); font-weight: 700; }
+.btn.y:active { background: var(--y2); }
+.btn.ghost { background: transparent; }
+.btn.sm { padding: 6px 12px; font-size: 13px; border-radius: 10px; }
+.btn.wide { width: 100%; padding: 12px; font-size: 15px; }
+.btn:disabled { opacity: .5; }
+
+main { padding: 14px 14px calc(var(--nav) + var(--sab) + 28px); max-width: 900px; margin: 0 auto; }
+
+/* ---------- 底部导航 ---------- */
+nav.tabbar { position: fixed; left: 0; right: 0; bottom: 0; z-index: 30; height: calc(var(--nav) + var(--sab)); padding-bottom: var(--sab);
+  background: rgba(16,16,16,.94); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-top: 1px solid var(--line);
+  display: grid; grid-template-columns: repeat(5, 1fr); align-items: center; }
+.tabbar button { background: none; border: 0; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 2px;
+  font-size: 11px; padding: 6px 0; position: relative; cursor: pointer; }
+.tabbar button svg { width: 23px; height: 23px; stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+.tabbar button.on { color: var(--ink); }
+.tabbar button.on svg { stroke: var(--y); }
+.tabbar button:active { transform: scale(.94); }
+.tabbar button i.dot { position: absolute; top: 4px; left: calc(50% + 8px); width: 8px; height: 8px; border-radius: 50%; background: var(--y); box-shadow: 0 0 0 2px #101010; }
+.tabbar .cast { color: var(--ink); }
+.tabbar .cast .orb { width: 52px; height: 52px; margin-top: -24px; border-radius: 50%; background: var(--y); color: var(--y-ink);
+  display: grid; place-items: center; font-size: 24px; font-style: normal; box-shadow: 0 6px 20px rgba(255,210,31,.28), 0 0 0 5px var(--bg); transition: transform .2s; }
+.tabbar .cast .orb span { display: inline-block; transition: transform .5s; }
+.tabbar .cast:active .orb { transform: scale(.92); }
+.tabbar .cast.busy .orb span { animation: spin 2.4s linear infinite; }
+.tabbar .cast.go .orb { animation: castp .6s ease-out; }
+.tabbar .cast:disabled { opacity: 1; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@keyframes castp { 0% { box-shadow: 0 0 0 5px var(--bg), 0 0 0 5px rgba(255,210,31,.7); } 100% { box-shadow: 0 0 0 5px var(--bg), 0 0 0 22px rgba(255,210,31,0); } }
+
+/* ---------- 任务面板 ---------- */
+#tasks { display: flex; flex-direction: column; gap: 8px; margin-bottom: 12px; }
+#tasks:empty { display: none; }
+.task { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 11px 14px; display: grid; grid-template-columns: 1fr auto; gap: 4px 12px; align-items: center; }
+.task .t { font-weight: 600; }
+.task .m { color: var(--muted); font-size: 13px; grid-column: 1 / -1; min-height: 20px; }
+.task .r { color: var(--muted); font-size: 12px; font-variant-numeric: tabular-nums; }
+.track { grid-column: 1 / -1; height: 6px; border-radius: 99px; background: #2a2a2a; overflow: hidden; }
+.fill { height: 100%; background: var(--y); border-radius: 99px; transition: width .4s ease; }
+.fill.indet { width: 30% !important; animation: indet 1.2s ease-in-out infinite; }
+@keyframes indet { 0% { transform: translateX(-100%); } 100% { transform: translateX(340%); } }
+.task.err { border-color: rgba(255,90,95,.5); }
+.task.err .m { color: var(--skip); }
+.task.ok .fill { background: #7bd88f; }
+.task .fl { grid-column: 1 / -1; color: var(--y); font-size: 12.5px; opacity: .85; animation: flin .5s ease; }
+@keyframes flin { from { opacity: 0; transform: translateY(3px); } to { opacity: .85; transform: none; } }
+
+/* ---------- 底部弹出的面板 ---------- */
+dialog { border: 0; padding: 0; color: var(--ink); background: var(--bg2); margin: 0; position: fixed; inset: auto 0 0 0; width: 100%; max-width: 100%;
+  max-height: 90vh; border-radius: 20px 20px 0 0; border-top: 1px solid var(--line); overflow: hidden; display: none; flex-direction: column; }
+dialog[open] { display: flex; animation: sheetIn .28s cubic-bezier(.2,.8,.25,1); }
+dialog.closing { animation: sheetOut .2s ease-in forwards; }
+dialog::backdrop { background: rgba(0,0,0,.6); }
+@keyframes sheetIn { from { transform: translateY(100%); } to { transform: none; } }
+@keyframes sheetOut { to { transform: translateY(100%); } }
+.grab { width: 38px; height: 4px; border-radius: 4px; background: #3a3a3a; margin: 8px auto 0; flex: none; }
+.dlg-h { display: flex; align-items: center; padding: 8px 18px 10px; flex: none; }
+.dlg-h h2 { font-size: 17px; margin: 0; flex: 1; }
+.dlg-x { background: #232323; border: 0; width: 30px; height: 30px; border-radius: 50%; color: var(--muted); font-size: 16px; line-height: 1; cursor: pointer; }
+.dlg-b { padding: 4px 18px calc(18px + var(--sab)); overflow-y: auto; -webkit-overflow-scrolling: touch; }
+@media (min-width: 700px) { dialog { max-width: 620px; left: 50%; transform: translateX(-50%); } dialog[open] { animation: none; } }
+pre.expl { white-space: pre-wrap; background: var(--panel); border: 1px solid var(--line); padding: 12px 14px; border-radius: 12px; font: inherit; font-size: 13.5px; margin: 0 0 10px; }
+
+/* ---------- 调音 ---------- */
+.cal .steps { display: flex; gap: 6px; margin-bottom: 14px; }
+.cal .steps span { flex: 1; height: 4px; border-radius: 4px; background: #2a2a2a; }
+.cal .steps span.on { background: var(--y); }
+.cal .cv { display: grid; grid-template-columns: 112px 1fr; gap: 14px; align-items: start; }
+.cal .cv > a { display: block; width: 112px; aspect-ratio: 3/4; border-radius: 10px; background: #1b1b1b; overflow: hidden; }
+.cal .cv img { width: 112px; aspect-ratio: 3/4; object-fit: cover; border-radius: 10px; background: #1b1b1b; display: block; }
+.cal .ti { font-size: 16px; font-weight: 700; line-height: 1.4; margin-bottom: 6px; }
+.cal .ti a { text-decoration: none; }
+.cal .meta { color: var(--muted); font-size: 12.5px; margin-bottom: 8px; }
+.cal .tg { display: flex; flex-wrap: wrap; gap: 4px; }
+.cal .tg span { background: #232323; border-radius: 999px; padding: 0 8px; font-size: 12px; color: #cfc9bd; }
+.cal .open { display: inline-block; margin-top: 10px; color: var(--y); font-size: 13px; text-decoration: none; }
+.cal .rs { display: flex; flex-wrap: wrap; gap: 8px; margin: 16px 0 12px; align-items: center; }
+.cal .rs .lbl { color: var(--muted); font-size: 12.5px; width: 100%; }
+.pill { border: 1px solid var(--line); background: transparent; color: var(--ink); border-radius: 999px; padding: 6px 14px; font-size: 13px; cursor: pointer; }
+.pill.on { background: var(--y); color: var(--y-ink); border-color: var(--y); font-weight: 700; }
+.pill.sub { font-size: 12.5px; padding: 5px 12px; }
+.lv4 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }
+.lv4 button { --c: #4a4a4a; border: 1px solid var(--line); background: var(--panel); color: var(--ink); border-radius: 14px; padding: 15px 4px;
+  font-weight: 700; font-size: 15px; cursor: pointer; transition: border-color .15s, background .15s, transform .08s; }
+.lv4 button.l4 { --c: #ffd21f; } .lv4 button.l3 { --c: #ffe680; } .lv4 button.l2 { --c: #8a93a6; } .lv4 button.l1 { --c: #ff5a5f; }
+.lv4 button:active { transform: scale(.96); border-color: var(--c); }
+.lv4 button.on { background: var(--c); border-color: var(--c); color: #111; }
+.cal .nav { display: flex; align-items: center; justify-content: space-between; margin-top: 12px; }
+.cal .nav button { background: none; border: none; color: var(--muted); cursor: pointer; font-size: 13.5px; padding: 8px 6px; }
+.cal .nav button:disabled { opacity: .35; }
+.cal .sum { font-size: 16px; line-height: 1.65; margin: 4px 0 14px; }
+.cal .sumrow { display: grid; grid-template-columns: 1fr auto; gap: 10px; align-items: center; padding: 9px 0; border-bottom: 1px solid var(--line); font-size: 13.5px; }
+.cal .sumrow select { background: var(--panel); color: var(--ink); border: 1px solid var(--line); border-radius: 9px; padding: 6px 8px; font-size: 13px; }
+.cal .wait { color: var(--y); min-height: 24px; margin: 30px 0; text-align: center; }
+
+/* ---------- 批次信息与筛选 ---------- */
+.head { display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; margin: 2px 0 12px; }
+.head h2 { margin: 0; font-size: 24px; letter-spacing: .02em; line-height: 1.1; }
+.head h2 span { color: var(--y); }
+.head .sub { color: var(--muted); font-size: 12.5px; margin-top: 4px; }
+.tabs { display: flex; gap: 4px; background: var(--bg2); border: 1px solid var(--line); padding: 3px; border-radius: 12px; width: 100%; }
+.tabs button { flex: 1; border: 0; background: transparent; padding: 7px 6px; border-radius: 9px; cursor: pointer; color: var(--muted); font-size: 13px; }
+.tabs button.on { background: var(--y); color: var(--y-ink); font-weight: 700; }
+.modes { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.modes button { text-align: left; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 13px 14px; color: var(--ink); cursor: pointer; position: relative; transition: border-color .15s, background .15s; }
+.modes button b { display: block; font-size: 15px; margin-bottom: 3px; }
+.modes button span { color: var(--muted); font-size: 12px; line-height: 1.5; }
+.modes button.on { border-color: var(--y); background: rgba(255,210,31,.08); }
+.modes button.on b { color: var(--y); }
+.modes button.on::after { content: "✓"; position: absolute; right: 12px; top: 10px; color: var(--y); font-weight: 700; }
+.note { color: var(--muted); font-size: 13px; background: var(--bg2); border: 1px dashed var(--line); border-radius: 12px; padding: 9px 12px; margin-bottom: 12px; }
+.note.thin { border-style: solid; border-color: #4a3d12; background: rgba(255,210,31,.06); color: #e8dca8; }
+.note.tip { display: flex; align-items: center; gap: 12px; border-style: solid; color: var(--ink); }
+.note.tip span { flex: 1; }
+.err { color: #ff8a7a; margin: 8px 0 0; font-size: 13px; line-height: 1.6; }
+.err:empty { display: none; }
+
+/* ---------- 卡片 ---------- */
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+@media (min-width: 640px) { .grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; } }
+.card { position: relative; background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; display: flex; flex-direction: column; }
+.card.fb-skip, .card.fb-seen, .card.fb-dislike { opacity: .45; }
+.cover { position: relative; aspect-ratio: 3 / 4; background: linear-gradient(160deg, #222, #151515); display: block; overflow: hidden; }
+.cover img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; }
+.ph { position: absolute; inset: 0; display: grid; place-items: center; padding: 14px; text-align: center; color: var(--faint); font-size: 12.5px; }
+.cover::after { content: ""; position: absolute; inset: auto 0 0 0; height: 40%; background: linear-gradient(transparent, rgba(0,0,0,.75)); pointer-events: none; }
+.pos { position: absolute; z-index: 2; left: 8px; top: 8px; background: var(--y); color: var(--y-ink); font-weight: 800; border-radius: 7px; min-width: 24px; text-align: center; padding: 0 6px; font-size: 12.5px; }
+.route { position: absolute; z-index: 2; right: 8px; top: 8px; background: rgba(0,0,0,.7); border: 1px solid rgba(255,255,255,.15); color: #eee; border-radius: 7px; padding: 0 7px; font-size: 11.5px; }
+.body { padding: 10px 10px 10px; display: flex; flex-direction: column; gap: 7px; flex: 1; }
+.title { font-weight: 650; font-size: 13.5px; line-height: 1.38; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; text-decoration: none; }
+.meta { color: var(--muted); font-size: 11.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.reason { font-size: 12px; color: #d9d4c7; border-left: 2px solid var(--y); padding: 1px 0 1px 7px; display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.tags { display: flex; flex-wrap: wrap; gap: 4px; }
+.tag { font-size: 11px; background: var(--bg2); border: 1px solid var(--line); color: var(--muted); border-radius: 999px; padding: 1px 8px; cursor: pointer; line-height: 1.55; }
+.tag.bl { text-decoration: line-through; color: var(--skip); border-color: rgba(255,90,95,.4); }
+.card.is-blocked .cover, .card.is-blocked .title, .card.is-blocked .reason { opacity: .4; }
+.blnote { font-size: 11.5px; color: var(--skip); }
+.why { align-self: flex-start; background: none; border: 0; padding: 2px 0; color: var(--y); font-size: 12px; cursor: pointer; }
+.acts { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-top: auto; padding-top: 2px; }
+.acts button { border: 1px solid var(--line); background: var(--bg2); border-radius: 10px; padding: 8px 0; cursor: pointer; font-size: 12.5px; color: var(--muted); white-space: nowrap; overflow: hidden; }
+.acts button:active { transform: scale(.96); }
+.acts button.want.on { background: var(--y); border-color: var(--y); color: var(--y-ink); font-weight: 700; }
+.acts button.skip.on { background: var(--skip); border-color: var(--skip); color: #fff; }
+.acts button.dislike.on { background: #6b1f22; border-color: var(--skip); color: #fff; }
+.acts button.seen.on { background: var(--seen); border-color: var(--seen); color: #111; }
+.seenq { display: flex; align-items: center; justify-content: space-between; gap: 6px; font-size: 11.5px; color: var(--muted); }
+.seenq button { border: 1px solid var(--line); background: none; color: var(--muted); border-radius: 999px; padding: 3px 10px; font-size: 12px; cursor: pointer; }
+.seenq button.on { background: var(--y); border-color: var(--y); color: var(--y-ink); font-weight: 700; }
+
+/* ---------- 抽卡 ---------- */
+.slot { perspective: 1400px; min-width: 0; }
+.slot.deal { animation: deal .5s var(--d, 0ms) both cubic-bezier(.2,.75,.25,1); }
+@keyframes deal { from { opacity: 0; transform: translateY(-28px) scale(.94) rotate(-2.5deg); } to { opacity: 1; transform: none; } }
+.flip { position: relative; height: 100%; transform-style: preserve-3d; transition: transform .6s cubic-bezier(.2,.75,.25,1); }
+.flip.down { transform: rotateY(180deg); }
+.slot.is-down { align-self: start; }
+.flip.down .card .body, .flip.opening .card .body { display: none; }
+.flip.down .card, .flip.opening .card { height: auto; }
+.flip.unfold .card .body { animation: bodyIn .35s ease-out; }
+@keyframes bodyIn { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+.flip > .card { height: 100%; backface-visibility: hidden; -webkit-backface-visibility: hidden; }
+.back { position: absolute; inset: 0; transform: rotateY(180deg); backface-visibility: hidden; -webkit-backface-visibility: hidden;
+  border: 1px solid var(--line); border-radius: var(--radius); cursor: pointer; color: var(--y); padding: 0;
+  background: radial-gradient(circle at 50% 46%, rgba(255,210,31,.10), transparent 55%), var(--panel);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 12px; }
+.back .bk-star { width: 38px; height: 38px; fill: var(--y); transition: transform .3s; }
+.back:active .bk-star { transform: rotate(45deg) scale(1.1); }
+.back .bk-no { font-size: 12px; letter-spacing: .14em; color: var(--muted); }
+.back .bk-tap { position: absolute; bottom: 14px; font-size: 11.5px; color: var(--faint); }
+.card.r-gold, .card.r-silver, .card.r-rainbow { border: 2px solid transparent; }
+.card.r-gold { background: linear-gradient(var(--panel), var(--panel)) padding-box,
+  linear-gradient(135deg, #fff4b8, #ffd21f 28%, #a8770a 55%, #ffe36b 80%, #c99a12) border-box; box-shadow: 0 0 18px rgba(255,210,31,.2); }
+.card.r-silver { background: linear-gradient(var(--panel), var(--panel)) padding-box,
+  linear-gradient(135deg, #ffffff, #9aa3ad 30%, #e8ebef 55%, #6b7380 80%, #cfd5dc) border-box; }
+.card.r-rainbow { background: linear-gradient(var(--panel), var(--panel)) padding-box,
+  linear-gradient(120deg, #ff5a5f, #ffb13b, #ffd21f, #7bd88f, #4cc9f0, #8f7bff, #ff6ad5) border-box; box-shadow: 0 0 20px rgba(143,123,255,.25); }
+.rar { position: absolute; z-index: 2; left: 8px; bottom: 7px; font-size: 11px; font-weight: 800; letter-spacing: .05em; border-radius: 6px; padding: 0 6px; color: #111; }
+.r-gold .rar { background: linear-gradient(135deg, #fff4b8, #ffd21f 45%, #c99a12); }
+.r-silver .rar { background: linear-gradient(135deg, #fff, #b9c0c8); }
+.r-rainbow .rar { background: linear-gradient(90deg, #ff8a8d, #ffd21f, #7bd88f, #4cc9f0, #b39dff); }
+.card.just::before { content: ""; position: absolute; inset: 0; z-index: 3; pointer-events: none; border-radius: inherit;
+  background: linear-gradient(105deg, transparent 35%, rgba(255,255,255,.38) 50%, transparent 65%); transform: translateX(-120%);
+  animation: shine .9s .25s ease-out forwards; }
+@keyframes shine { to { transform: translateX(120%); } }
+.deck { display: flex; justify-content: center; padding: 24px 0 10px; }
+.deck[hidden] { display: none; }
+.deck .pile { position: relative; width: 62px; height: 84px; }
+.deck .pile i { position: absolute; inset: 0; border-radius: 9px; border: 1px solid #4a4030;
+  background: radial-gradient(circle at 50% 45%, rgba(255,210,31,.35) 0 6px, rgba(255,210,31,.12) 7px, transparent 60%), #15130e; }
+.deck .pile i:nth-child(1) { animation: shufL 1.6s ease-in-out infinite; }
+.deck .pile i:nth-child(2) { animation: shufR 1.6s .4s ease-in-out infinite; }
+.deck .pile i:nth-child(3) { transform: rotate(-3deg); }
+@keyframes shufL { 0%, 100% { transform: translateX(0) rotate(0); z-index: 1; } 40% { transform: translateX(-46px) rotate(-10deg); z-index: 1; } 60% { z-index: 4; } 80% { transform: translateX(0) rotate(2deg); z-index: 4; } }
+@keyframes shufR { 0%, 100% { transform: translateX(0) rotate(0); z-index: 2; } 40% { transform: translateX(46px) rotate(10deg); z-index: 2; } 60% { z-index: 5; } 80% { transform: translateX(0) rotate(-2deg); z-index: 5; } }
+.reveal-bar { display: flex; align-items: center; justify-content: space-between; gap: 14px; margin: 0 0 12px; color: var(--muted); font-size: 13px; }
+.pop { position: fixed; z-index: 70; background: var(--panel2); border: 1px solid #3d3d3d; border-radius: 14px; padding: 12px 14px; box-shadow: 0 12px 32px rgba(0,0,0,.5);
+  font-size: 13.5px; display: flex; flex-direction: column; gap: 10px; max-width: 270px; animation: pop .15s ease-out; }
+.pop[hidden] { display: none; }
+.pop .row { gap: 8px; justify-content: flex-end; }
+@keyframes pop { from { opacity: 0; transform: scale(.96) translateY(6px); } to { opacity: 1; transform: none; } }
+.blist { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.blist span { display: inline-flex; align-items: center; gap: 2px; font-size: 12.5px; border: 1px solid rgba(255,90,95,.4); color: #ffb3b5; border-radius: 999px; padding: 2px 2px 2px 11px; }
+.blist button { border: 0; background: none; color: var(--muted); cursor: pointer; padding: 2px 8px; font-size: 15px; line-height: 1; }
+@media (prefers-reduced-motion: reduce) { *, *::before, *::after { animation: none !important; transition: none !important; } }
+
+/* ---------- 往期 ---------- */
+.vols { display: flex; flex-direction: column; gap: 8px; }
+.vol { display: flex; align-items: center; gap: 12px; background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; cursor: pointer; text-align: left; width: 100%; }
+.vol:active { background: var(--panel2); }
+.vol b { font-size: 17px; min-width: 70px; }
+.vol b span { color: var(--y); }
+.vol .vm { flex: 1; color: var(--muted); font-size: 12.5px; }
+.vol.on { border-color: var(--y); }
+
+/* ---------- 起步引导 ---------- */
+.onb { display: flex; flex-direction: column; gap: 12px; margin-top: 10px; }
+.step { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+.step h3 { margin: 0; font-size: 15px; display: flex; gap: 8px; align-items: center; }
+.num { width: 22px; height: 22px; border-radius: 50%; background: var(--y); color: var(--y-ink); display: grid; place-items: center; font-size: 12px; font-weight: 800; }
+.step.done .num { background: #7bd88f; }
+.step p { margin: 0; color: var(--muted); font-size: 13px; }
+.hero { padding: 18px 2px 6px; }
+.hero h1 { margin: 0 0 8px; font-size: 26px; line-height: 1.3; }
+.hero h1 span { color: var(--y); }
+.hero p { margin: 0; color: var(--muted); }
+
+/* ---------- 设置 ---------- */
+.sec { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 13px 14px; margin-bottom: 12px; }
+.sec h4 { margin: 0 0 10px; font-size: 14.5px; display: flex; align-items: center; gap: 8px; }
+.sec h4 .st { margin-left: auto; font-weight: 400; font-size: 12px; color: var(--muted); }
+.ok { color: #7bd88f; } .bad { color: var(--skip); }
+.form { display: grid; gap: 9px; }
+.inp { width: 100%; background: var(--bg); border: 1px solid var(--line); border-radius: 11px; padding: 10px 12px; font-size: 15px; }
+.inp:focus { outline: none; border-color: var(--y); }
+.row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+.hint { color: var(--faint); font-size: 12px; margin: 6px 0 0; }
+details.adv summary { cursor: pointer; color: var(--muted); padding: 2px 0; }
+details.adv[open] summary { color: var(--ink); margin-bottom: 10px; }
+label.lb { color: var(--muted); font-size: 12px; }
+.srow { display: flex; align-items: center; gap: 12px; padding: 6px 0; }
+.srow > div { flex: 1; }
+.switch { position: relative; width: 44px; height: 26px; flex: none; }
+.switch input { opacity: 0; width: 0; height: 0; }
+.switch span { position: absolute; inset: 0; background: #333; border-radius: 99px; transition: .2s; cursor: pointer; }
+.switch span::before { content: ""; position: absolute; width: 20px; height: 20px; left: 3px; top: 3px; background: #ddd; border-radius: 50%; transition: .2s; }
+.switch input:checked + span { background: var(--y); }
+.switch input:checked + span::before { transform: translateX(18px); background: #111; }
+.stepper { display: flex; align-items: center; gap: 4px; }
+.stepper button { width: 34px; height: 34px; border-radius: 10px; border: 1px solid var(--line); background: var(--bg2); font-size: 18px; line-height: 1; cursor: pointer; }
+.stepper b { min-width: 30px; text-align: center; font-variant-numeric: tabular-nums; }
+
+.toast { position: fixed; left: 50%; bottom: calc(var(--nav) + var(--sab) + 18px); transform: translateX(-50%); background: var(--y); color: var(--y-ink); font-weight: 600;
+  padding: 9px 16px; border-radius: 12px; z-index: 90; opacity: 0; transition: opacity .2s; pointer-events: none; max-width: calc(100vw - 40px); text-align: center; }
+.toast.on { opacity: 1; }
+.empty-msg { text-align: center; color: var(--muted); padding: 40px 0; }
+</style>
+</head>
+<body>
+<header>
+  <div class="bar">
+    <div class="brand"><div class="logo">本</div><div class="word"><b>HONMEI</b><small>替你找下一本本命</small></div></div>
+    <span class="spacer"></span>
+    <div class="stat" id="stat"></div>
+  </div>
+</header>
+
+<main>
+  <div class="deck" id="deck" hidden><div class="pile"><i></i><i></i><i></i></div></div>
+  <div id="tasks"></div>
+  <div id="content"></div>
+</main>
+
+<nav class="tabbar">
+  <button class="on" id="navShelf" onclick="goShelf()"><svg viewBox="0 0 24 24"><rect x="3.5" y="4" width="7" height="16" rx="1.5"/><rect x="13.5" y="4" width="7" height="16" rx="1.5"/></svg>书架</button>
+  <button id="navCal" onclick="openCal()"><svg viewBox="0 0 24 24"><path d="M5 20V13M5 9V4M12 20v-9M12 7V4M19 20v-5M19 11V4M3 13h4M10 7h4M17 15h4"/></svg>调音</button>
+  <button class="cast" id="genBtn"><i class="orb"><span>✦</span></i>开卷</button>
+  <button id="navVols" onclick="openVols()"><svg viewBox="0 0 24 24"><path d="M4 7h16M4 12h16M4 17h10"/></svg>往期</button>
+  <button id="navSet" onclick="openSet()"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>设置</button>
+</nav>
+
+<dialog id="setDlg">
+  <div class="grab"></div>
+  <div class="dlg-h"><h2>账号与设置</h2><button class="dlg-x" onclick="closeDlg(setDlg)">✕</button></div>
+  <div class="dlg-b">
+    <div class="sec" id="secPica"></div>
+    <div class="sec" id="secJm"></div>
+    <div class="sec">
+      <h4>推荐</h4>
+      <div class="srow"><div>每卷几本</div><div class="stepper" style="flex:none"><button onclick="stepSize(-2)">−</button><b id="batchSizeV"></b><button onclick="stepSize(2)">＋</button></div></div>
+      <div class="srow"><div><div>抽卡动画</div><div class="hint" style="margin:0">新的一卷背面朝上，一张张点开。</div></div>
+        <label class="switch"><input type="checkbox" id="animOn"><span></span></label></div>
+      <div style="margin-top:8px"><div>拉黑的标签</div>
+        <div class="blist" id="blockedList"></div>
+        <div class="hint" id="blockedHint" style="margin:6px 0 0"></div></div>
+      <div class="hint" id="rankerState" style="margin-top:12px"></div>
+      <div class="row" style="margin-top:12px"><button class="btn sm ghost" id="resetBtn" onclick="resetBatches()">重置开卷记录</button>
+        <span class="hint" id="resetMsg" style="margin:0;flex:1">清空所有 Vol，下一卷从 Vol.1 开始。心动、略过、调音都留着。</span></div>
+    </div>
+    <div class="sec">
+      <details class="adv">
+        <summary>高级设置（一般不用改）</summary>
+        <div class="form">
+          <label class="lb">代理（留空 = 直连。开着 VPN 时不用填）</label><input class="inp" id="proxy" placeholder="例如 127.0.0.1:7890">
+          <label class="lb">禁漫网页域名（点卡片打开用）</label><input class="inp" id="jmDomain" placeholder="18comic.vip">
+          <label class="lb">哔咔作品链接模板</label><input class="inp" id="picaTpl">
+          <div class="row"><button class="btn sm y" onclick="saveAdvanced()">保存</button><span class="hint" id="saveMsg" style="margin:0"></span></div>
+        </div>
+      </details>
+    </div>
+    <p class="hint" style="text-align:center">本命 HONMEI · 数据只存在这台手机里</p>
+  </div>
+</dialog>
+
+<dialog id="calDlg">
+  <div class="grab"></div>
+  <div class="dlg-h"><h2>为你的口味调音</h2><button class="dlg-x" onclick="closeCal()">✕</button></div>
+  <div class="dlg-b cal" id="calBody"></div>
+</dialog>
+
+<dialog id="whyDlg">
+  <div class="grab"></div>
+  <div class="dlg-h"><h2 id="whyTitle">为何是它</h2><button class="dlg-x" onclick="closeDlg(whyDlg)">✕</button></div>
+  <div class="dlg-b"><pre class="expl" id="whyLocal"></pre></div>
+</dialog>
+
+<dialog id="genDlg">
+  <div class="grab"></div>
+  <div class="dlg-h"><h2>这一卷想要什么口味？</h2><button class="dlg-x" onclick="closeDlg(genDlg)">✕</button></div>
+  <div class="dlg-b">
+    <div class="modes" id="modeList"></div>
+    <div id="genThin"></div>
+    <button class="btn y wide" id="genGo">开卷 ✦</button>
+    <p class="hint" style="text-align:center">会记住这次的选择，下次直接是它。</p>
+  </div>
+</dialog>
+
+<dialog id="volDlg">
+  <div class="grab"></div>
+  <div class="dlg-h"><h2>往期</h2><button class="dlg-x" onclick="closeDlg(volDlg)">✕</button></div>
+  <div class="dlg-b"><div class="vols" id="volList"></div></div>
+</dialog>
+
+<div class="pop" id="tagPop" hidden></div>
+<div class="toast" id="toast"></div>
+
+<script>
+const $ = (id) => document.getElementById(id);
+const LABEL = { want: "♥ 心动", skip: "略过", dislike: "不喜欢", seen: "读过", seen_like: "读过·喜欢" };
+const SITE = { pica: "哔咔", jm: "禁漫" };
+const App = window.HonmeiApp || null;      // 安卓壳提供：复制、保持亮屏
+let S = { status: null, batch: null, filter: "all", settings: null };
+let pollTimer = null, lastRunning = new Set();
+
+async function api(path, opts = {}) {
+  const r = await fetch(path, { headers: { "Content-Type": "application/json" }, ...opts });
+  const data = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(data.detail || ("请求失败 " + r.status));
+  return data;
+}
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+const fmtTime = (t) => { const d = new Date(t * 1000); return `${d.getMonth() + 1}/${d.getDate()} ${String(d.getHours()).padStart(2, "0")}:${String(d.getMinutes()).padStart(2, "0")}`; };
+const ago = (t) => { const s = Date.now() / 1000 - t; return s < 90 ? "刚刚" : s < 3600 ? `${Math.round(s / 60)} 分钟前` : s < 86400 ? `${Math.round(s / 3600)} 小时前` : fmtTime(t); };
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove("on"), 1900); }
+function copyText(t) {
+  if (App && App.copy) { App.copy(t); return Promise.resolve(); }
+  return navigator.clipboard ? navigator.clipboard.writeText(t) : Promise.reject();
+}
+
+/* ---------- 面板 ---------- */
+function openDlg(d) { if (!d.open) d.showModal(); }
+function closeDlg(d) {
+  if (!d.open || d.classList.contains("closing")) return;
+  d.classList.add("closing");
+  setTimeout(() => { d.classList.remove("closing"); d.close(); }, 190);
+}
+document.querySelectorAll("dialog").forEach(d => {
+  d.addEventListener("click", (e) => { if (e.target === d) (d.id === "calDlg" ? closeCal() : closeDlg(d)); });   // 点面板外面关掉
+  d.addEventListener("cancel", (e) => { e.preventDefault(); d.id === "calDlg" ? closeCal() : closeDlg(d); });
+});
+// 手机返回键：先关弹出的东西，没有可关的再退出
+window.honmeiBack = function () {
+  if (!$("tagPop").hidden) { closePop(); return true; }
+  const open = [...document.querySelectorAll("dialog[open]")];
+  if (open.length) { const d = open[open.length - 1]; d.id === "calDlg" ? closeCal() : closeDlg(d); return true; }
+  return false;
+};
+function goShelf() { window.scrollTo({ top: 0, behavior: "smooth" }); }
+
+/* ---------- 状态 ---------- */
+async function loadStatus() {
+  const s = await api("/api/status");
+  S.status = s;
+  const p = s.sites.pica, j = s.sites.jm;
+  const fb = s.feedback_counts || {};
+  $("stat").innerHTML = p.favorites + j.favorites ? `收藏 <b>${p.favorites + j.favorites}</b><br>心动 <b>${fb["心动"] || 0}</b>` : "";
+  if (!S.mode) S.mode = s.rec_mode || "balance";
+  renderMode();
+  $("navCal").querySelector("i.dot")?.remove();
+  if (s.calibrate && s.calibrate.dot) $("navCal").insertAdjacentHTML("beforeend", `<i class="dot"></i>`);
+  renderSettings();
+  renderTasks(s.jobs || []);
+  for (const j of s.jobs || []) if (j.status === "running") lastRunning.add(j.id);
+  if (lastRunning.size) startPolling();
+}
+
+/* ---------- 任务面板 ---------- */
+function renderTasks(jobs) {
+  $("tasks").innerHTML = jobs.map(j => {
+    const pct = j.total ? Math.min(100, Math.round(100 * (j.done || 0) / j.total)) : null;
+    let right = "";
+    if (j.status === "running" && j.total) {
+      right = `${j.done || 0} / ${j.total}`;
+      const el = Date.now() / 1000 - j.phase_started_at;
+      if (j.done > 2 && j.done < j.total) {
+        const eta = el / j.done * (j.total - j.done);
+        right += eta > 60 ? ` · 约 ${Math.ceil(eta / 60)} 分钟` : ` · 约 ${Math.ceil(eta)} 秒`;
+      }
+    } else if (j.status === "done") right = "完成";
+    else if (j.status === "error") right = `<button class="btn sm ghost" onclick="this.closest('.task').remove()">关闭</button>`;
+    const cls = j.status === "error" ? "err" : j.status === "done" ? "ok" : "";
+    const fill = j.status === "done" ? `style="width:100%"` : pct === null ? `class="fill indet"` : `style="width:${pct}%"`;
+    const msg = j.status === "error" ? j.error : (j.status === "done" ? doneText(j) : j.progress);
+    return `<div class="task ${cls}"><div class="t">${esc(j.title || j.kind)}</div><div class="r">${right}</div>
+      ${j.status === "error" ? "" : `<div class="track"><div class="fill" ${fill}></div></div>`}
+      <div class="m">${esc(msg)}</div>${j.status === "running" ? `<div class="fl" data-k="${esc(j.kind)}">${esc(flavor(j.kind))}</div>` : ""}</div>`;
+  }).join("");
+  const busy = jobs.some(j => j.status === "running");
+  try { App && App.busy && App.busy(busy); } catch (e) {}
+}
+const FLAVOR = [
+  "正在翻阅 {n} 本收藏的扉页……", "为 {k} 个口味簇各自定调", "比对标签在全站的稀有程度", "把哔咔的说法译成禁漫的说法",
+  "估算每一本与你的距离", "校准心动的阈值", "在冷门的角落多看一眼", "剔除你已经读过的同一本", "为这一卷排定先后", "写下“为何是它”",
+];
+const FLAVOR_CAL = ["正在重写你的口味谱", "把这一轮的回答记进书页", "重新称量每一簇的分量"];
+function flavor(kind, list) {
+  const off = [...(kind || "")].reduce((a, c) => a + c.charCodeAt(0), 0);
+  const L = list || FLAVOR, i = (Math.floor(Date.now() / 2500) + off) % L.length;
+  const st = S.status || {};
+  const n = st.sites ? (st.sites.pica.favorites + st.sites.jm.favorites) : "";
+  return L[i].replace("{n}", n || "你的").replace("{k}", st.clusters || "几");
+}
+setInterval(() => {
+  document.querySelectorAll(".task .fl").forEach(el => { const t = flavor(el.dataset.k); if (el.textContent !== t) { el.textContent = t; el.style.animation = "none"; el.offsetHeight; el.style.animation = ""; } });
+  document.querySelectorAll(".cal .wait").forEach(el => { el.textContent = flavor("cal", FLAVOR_CAL); });
+}, 500);
+function doneText(j) {
+  const r = j.result || {};
+  if (j.kind.startsWith("import")) return `已导入 ${r.count} 本` + (r.detail_failed ? `，${r.detail_failed} 本没取到标签（下次导入会补）` : "") +
+    (S.status && S.status.calibrate && !S.status.calibrate.rated ? "。可以点下面的“调音”给 5 本打分，推荐会更准" : "");
+  if (j.kind === "generate") return `Vol.${r.vol ?? r.batch_id} 已成卷`;
+  return "完成";
+}
+function startPolling() {
+  if (pollTimer) return;
+  pollTimer = setInterval(async () => {
+    let jobs;
+    try { jobs = await api("/api/jobs"); } catch (e) { return; }
+    renderTasks(jobs);
+    const running = new Set(jobs.filter(j => j.status === "running").map(j => j.id));
+    for (const id of lastRunning) if (!running.has(id)) {
+      const j = jobs.find(x => x.id === id);
+      await loadStatus();
+      if (j && j.kind === "generate" && j.status === "done") {
+        if (animOn()) { dealSet(j.result.batch_id, new Set()); S.justDealt = j.result.batch_id; S.filter = "all"; }
+        await loadBatch(j.result.batch_id);
+        window.scrollTo({ top: 0, behavior: "smooth" });
+      }
+      else if (!S.batch) render();
+    }
+    lastRunning = running;
+    const gen = jobs.some(j => j.kind === "generate" && j.status === "running");
+    $("genBtn").disabled = gen; $("genBtn").classList.toggle("busy", gen);
+    $("deck").hidden = !(gen && animOn());
+    if (!running.size && !jobs.some(j => j.status === "done")) { clearInterval(pollTimer); pollTimer = null; }
+  }, 1000);
+}
+async function runJob(path, body) {
+  const { job } = await api(path, { method: "POST", body: JSON.stringify(body || {}) });
+  lastRunning.add(job);
+  renderTasks(await api("/api/jobs"));
+  startPolling();
+  return job;
+}
+
+/* ---------- 批次 ---------- */
+async function loadBatch(id) {
+  try { S.batch = id ? await api("/api/batches/" + id) : await api("/api/batches/latest"); }
+  catch (e) { S.batch = null; }
+  render();
+  if (S.batch) history.replaceState(null, "", "#batch=" + S.batch.id);
+}
+
+function render() {
+  const b = S.batch, c = $("content");
+  if (!b) { c.innerHTML = onboarding(); return; }
+  const m = b.meta || {};
+  const engine = b.engine.includes("personal") ? "按你的反馈微调" : "固定打分";
+  const items = b.items.filter(it => S.filter === "all" ? true : S.filter === "none" ? !it.feedback : it.feedback === S.filter);
+  const rar = rarities(b.items);
+  const anyDown = b.items.some(isDown);
+  const n = (f) => b.items.filter(it => f === "none" ? !it.feedback : it.feedback === f).length;
+  c.innerHTML = `
+    <div class="head">
+      <div><h2>Vol. <span>${b.vol ?? b.id}</span></h2><div class="sub">${fmtTime(b.created_at)}${m.mode && m.mode !== "balance" ? ` · ${esc(m.mode_name)}` : ""} · ${engine} · ${m.pool ?? "?"} 本里挑出 ${b.items.length} 本</div></div>
+      <div class="tabs">
+        ${[["all", "全部", b.items.length], ["none", "未表态", n("none")], ["want", "心动", n("want")]].map(([k, t, c]) =>
+          `<button class="${S.filter === k ? "on" : ""}" onclick="setFilter('${k}')">${t} ${c}</button>`).join("")}
+      </div>
+    </div>
+    ${thinNote()}${tipNote()}
+    ${m.ranker_message ? `<div class="note">${esc(m.ranker_message)}</div>` : ""}
+    ${anyDown ? `<div class="reveal-bar" id="revealAll"><span>点卡片一张张翻开</span><button class="btn sm y" onclick="revealAll()">全部翻开</button></div>` : ""}
+    ${items.length ? `<div class="grid">${items.map((it, i) => card(it, i, rar)).join("")}</div>` : `<div class="empty-msg">这里还空着</div>`}`;
+  S.justDealt = null;
+}
+/* ---------- 抽卡 ---------- */
+function animOn() {
+  if (S.settings && S.settings.card_anim === false) return false;
+  try { return !matchMedia("(prefers-reduced-motion: reduce)").matches; } catch (e) { return true; }
+}
+const DEAL_MEM = {};
+function dealGet(bid) {
+  try { const v = localStorage.getItem("honmei:deal:" + bid); if (v !== null) return new Set(JSON.parse(v)); } catch (e) {}
+  return DEAL_MEM[bid] || null;
+}
+function dealSet(bid, set) {
+  DEAL_MEM[bid] = set;
+  try { set === null ? localStorage.removeItem("honmei:deal:" + bid) : localStorage.setItem("honmei:deal:" + bid, JSON.stringify([...set])); } catch (e) {}
+}
+function isDown(it) {
+  if (!S.batch || !animOn() || it.feedback) return false;
+  const d = dealGet(S.batch.id);
+  return !!d && !d.has(it.pos);
+}
+function rarities(items) {
+  const main = items.filter(it => it.route !== "explore" && it.route !== "cold").sort((a, b) => b.score - a.score);
+  const gold = new Set(main.slice(0, Math.max(1, Math.round(items.length * 0.3))).map(it => it.pos));
+  const out = {};
+  for (const it of items) out[it.pos] = it.feedback === "want" || it.feedback === "seen_like" ? "rainbow"
+    : gold.has(it.pos) ? "gold" : (it.route === "explore" || it.route === "cold") ? "silver" : "";
+  return out;
+}
+const RAR_NAME = { gold: "✦ 金卡", silver: "偶遇", rainbow: "♥ 彩卡" };
+function reveal(pos) {
+  const b = S.batch; if (!b) return;
+  const d = dealGet(b.id) || new Set();
+  d.add(pos);
+  const left = b.items.filter(it => !it.feedback && !d.has(it.pos)).length;
+  dealSet(b.id, left ? d : null);
+  const el = $("card-" + pos);
+  if (el) {
+    const f = el.querySelector(".flip");
+    f.classList.add("opening"); f.classList.remove("down");
+    setTimeout(() => { f.classList.remove("opening"); f.classList.add("unfold"); el.classList.remove("is-down"); }, 560);
+    setTimeout(() => f.classList.remove("unfold"), 950);
+    const c = el.querySelector(".card");
+    if (c.classList.contains("r-gold") || c.classList.contains("r-rainbow")) { c.classList.remove("just"); void c.offsetWidth; c.classList.add("just"); }
+    try { App && App.tick && App.tick(); } catch (e) {}
+  }
+  const all = $("revealAll"); if (all && !left) all.remove();
+}
+function revealAll() {
+  const b = S.batch; if (!b) return;
+  b.items.filter(isDown).map(it => it.pos).forEach((pos, i) => setTimeout(() => reveal(pos), i * 90));
+}
+function setFilter(f) { S.filter = f; render(); }
+
+function card(it, idx = 0, rar = {}) {
+  const fb = it.feedback, r = rar[it.pos] || "", down = isDown(it);
+  const bl = new Set(it.blocked || []);
+  const dealing = S.justDealt === S.batch.id;
+  const read = fb === "seen" || fb === "seen_like";
+  const btn = (l) => `<button class="${l} ${fb === l || (l === "seen" && read) ? "on" : ""}" onclick="feedback(${it.pos}, '${l}')">${LABEL[l]}</button>`;
+  const seenQ = read ? `<div class="seenq"><span>还喜欢吗？</span><button class="${fb === "seen_like" ? "on" : ""}" onclick="feedback(${it.pos}, '${fb === "seen_like" ? "seen" : "seen_like"}', true)">${fb === "seen_like" ? "♥ 喜欢" : "♡ 喜欢"}</button></div>` : "";
+  return `<div class="slot${dealing ? " deal" : ""}${down ? " is-down" : ""}"${dealing ? ` style="--d:${idx * 70}ms"` : ""} id="card-${it.pos}"><div class="flip${down ? " down" : ""}">
+  <div class="card ${fb ? "fb-" + fb : ""}${r ? " r-" + r : ""}${bl.size ? " is-blocked" : ""}${S.shine === it.pos ? " just" : ""}">
+    <a class="cover" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">
+      <div class="ph">${esc(it.core_title)}</div>
+      <img loading="lazy" src="${esc(it.cover)}" alt="" onerror="this.remove()">
+      <span class="pos">${it.pos}</span><span class="route">${esc(it.reason.route_name || it.route)}</span>
+      ${r ? `<span class="rar">${RAR_NAME[r]}</span>` : ""}
+    </a>
+    <div class="body">
+      <a class="title" href="${esc(it.url)}" target="_blank" rel="noopener noreferrer">${esc(it.core_title)}</a>
+      <div class="meta">${esc((it.authors || []).join("、") || "作者未知")}${it.parodies?.length ? " · " + esc(it.parodies[0]) : ""}</div>
+      <div class="reason">${esc(it.reason.text || "")}</div>
+      <div class="tags">${(it.tags || []).slice(0, 4).map(t => `<button class="tag${bl.has(t) || blockedHas(t) ? " bl" : ""}" data-tag="${esc(t)}">${esc(t)}</button>`).join("")}</div>
+      ${bl.size ? `<div class="blnote">已拉黑「${esc([...bl].join("、"))}」</div>` : ""}
+      <button class="why" onclick="why(${it.pos})">为何是它 →</button>
+      <div class="acts">${btn("want")}${btn("skip")}${btn("dislike")}${btn("seen")}</div>${seenQ}
+    </div></div>
+  <button class="back" onclick="reveal(${it.pos})" aria-label="翻开第 ${it.pos} 本"><svg class="bk-star" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 0C12.9 7.6 16.4 11.1 24 12 16.4 12.9 12.9 16.4 12 24 11.1 16.4 7.6 12.9 0 12 7.6 11.1 11.1 7.6 12 0Z"/></svg><span class="bk-no">No.${it.pos}</span><span class="bk-tap">轻点翻开</span></button>
+  </div></div>`;
+}
+
+async function feedback(pos, label, exact = false) {
+  const it = S.batch.items.find(x => x.pos === pos);
+  const same = it.feedback === label || (label === "seen" && it.feedback === "seen_like");
+  const next = exact ? label : same ? null : label;
+  try {
+    await api("/api/feedback", { method: "POST", body: JSON.stringify({ batch_id: S.batch.id, pos, label: next }) });
+    it.feedback = next;
+    S.shine = (next === "want" || next === "seen_like") ? pos : null;
+    const y = window.scrollY; render(); window.scrollTo(0, y); S.shine = null;
+    loadStatus();
+    toast(next ? `记下了：${LABEL[next].replace("♥ ", "")}` : "已撤销");
+  } catch (e) { toast(e.message); }
+}
+
+async function why(pos) {
+  $("whyTitle").textContent = `No.${pos}　为何是它`;
+  $("whyLocal").textContent = "翻找中…";
+  openDlg(whyDlg);
+  try { const r = await api(`/api/explain/${S.batch.id}/${pos}`); $("whyLocal").textContent = r.local; }
+  catch (e) { $("whyLocal").textContent = e.message; }
+}
+
+/* ---------- 往期 ---------- */
+function openVols() {
+  const bs = (S.status && S.status.batches) || [];
+  $("volList").innerHTML = bs.length ? bs.map(b => {
+    const m = b.meta || {};
+    return `<button class="vol ${S.batch && S.batch.id === b.id ? "on" : ""}" onclick="pickVol(${b.id})"><b>Vol.<span>${b.vol ?? b.id}</span></b>
+      <span class="vm">${fmtTime(b.created_at)}${m.mode_name && m.mode !== "balance" ? " · " + esc(m.mode_name) : ""} · ${b.count} 本</span><span style="color:var(--faint)">›</span></button>`;
+  }).join("") : `<div class="empty-msg">还没开过卷。点下面的 ✦ 开第一卷。</div>`;
+  openDlg(volDlg);
+}
+async function pickVol(id) { closeDlg(volDlg); S.filter = "all"; await loadBatch(id); window.scrollTo(0, 0); }
+
+/* ---------- 起步引导 ---------- */
+function onboarding() {
+  const s = S.status; if (!s) return "";
+  const p = s.sites.pica, j = s.sites.jm;
+  const step = (n, done, title, body) => `<div class="step ${done ? "done" : ""}"><h3><span class="num">${done ? "✓" : n}</span>${title}</h3>${body}</div>`;
+  const loginForm = (site, ph) => `<div class="form"><input class="inp" id="${site}U" placeholder="${ph}" autocomplete="off" autocapitalize="off"><input class="inp" id="${site}P" type="password" placeholder="密码"><button class="btn y" id="${site}Go" onclick="login('${site}', '${site}U', '${site}P')">登录${SITE[site]}</button></div><p class="err" id="${site}Err"></p>`;
+  const siteStep = (n, site, ph) => {
+    const st = s.sites[site];
+    if (!st.logged_in) return step(n, false, `登录${SITE[site]}`, `<p>账号只保存在这台手机里，只用于向${SITE[site]}登录。</p>${loginForm(site, ph)}`);
+    if (!st.favorites) return step(n, false, `导入${SITE[site]}收藏`, `<p>已登录。第一次要几分钟（收藏多的话久一点），进度条在走就是在干活，导入时屏幕会保持常亮 ☕</p><button class="btn y" onclick="doImport('${site}')">导入收藏</button>`);
+    return step(n, true, `${SITE[site]}收藏 ${st.favorites} 本`, `<p>${st.last_import ? "上次导入 " + ago(st.last_import.at) : ""}</p><div><button class="btn sm" onclick="doImport('${site}')">重新导入</button></div>`);
+  };
+  const ready = p.favorites + j.favorites > 0;
+  return `<div class="hero"><h1>下一本<span>本命</span>，<br>正在某处等你。</h1><p>读懂你在哔咔和禁漫的收藏，去禁漫替你寻那些还没遇见的作品。一切都在这台手机上完成。</p></div>
+    <div class="onb">${siteStep(1, "pica", "哔咔用户名或邮箱")}${siteStep(2, "jm", "禁漫用户名")}
+    ${step(3, false, "翻开第一卷", `<p>${ready ? "收藏已就绪。只有一个站也可以先开卷，另一个站之后补上会合并计算。" : "先完成前两步中的至少一个。"}</p>${ready ? thinNote() : ""}<button class="btn y" ${ready ? "" : "disabled"} onclick="openGen()">开卷 ✦</button>`)}</div>`;
+}
+
+/* ---------- 设置 ---------- */
+function openSet() { renderSettings(); fillSettings(); openDlg(setDlg); }
+function renderSettings() {
+  const s = S.status; if (!s) return;
+  for (const site of ["pica", "jm"]) {
+    const st = s.sites[site];
+    const box = $(site === "pica" ? "secPica" : "secJm");
+    const head = `<h4>${SITE[site]}<span class="st">${st.logged_in ? `<span class="ok">已登录</span> · 收藏 ${st.favorites} 本${st.last_import ? " · " + ago(st.last_import.at) + "导入" : ""}` : "未登录"}</span></h4>`;
+    box.innerHTML = head + (st.logged_in
+      ? `<div class="row"><button class="btn sm y" onclick="doImport('${site}')">${st.favorites ? "重新导入" : "导入收藏"}</button><button class="btn sm ghost" onclick="logout('${site}')">退出登录</button></div>`
+      : `<div class="form"><input class="inp" id="${site}DU" placeholder="${site === "pica" ? "哔咔用户名或邮箱" : "禁漫用户名"}" autocomplete="off" autocapitalize="off"><input class="inp" id="${site}DP" type="password" placeholder="密码"><button class="btn sm y" id="${site}DGo" onclick="login('${site}', '${site}DU', '${site}DP', '${site}DGo')">登录</button></div><p class="err" id="${site}DErr"></p>`);
+  }
+  const r = s.ranker || {};
+  const fbText = Object.entries(s.feedback_counts || {}).map(([k, v]) => `${k} ${v}`).join("，") || "还没有表态";
+  $("rankerState").textContent = `排序：${r.message || "固定打分"}${r.weights_text ? "（个人权重：" + r.weights_text + "）" : ""} 你的表态：${fbText}。`;
+}
+async function fillSettings() {
+  const s = await api("/api/settings"); S.settings = s;
+  $("batchSizeV").textContent = s.batch_size;
+  $("proxy").value = s.proxy || ""; $("jmDomain").value = s.jm?.web_domain || ""; $("picaTpl").value = s.pica?.web_url_template || "";
+  $("animOn").checked = s.card_anim !== false; renderBlocked();
+  $("saveMsg").textContent = "";
+}
+async function stepSize(d) {
+  const cur = +(S.settings?.batch_size || 10), v = Math.max(6, Math.min(30, cur + d));
+  if (v === cur) return;
+  $("batchSizeV").textContent = v;
+  S.settings = await api("/api/settings", { method: "POST", body: JSON.stringify({ batch_size: v }) });
+}
+$("animOn").onchange = async (e) => {
+  await api("/api/settings", { method: "POST", body: JSON.stringify({ card_anim: e.target.checked }) });
+  S.settings = { ...(S.settings || {}), card_anim: e.target.checked };
+  if (!e.target.checked && S.batch) { dealSet(S.batch.id, null); render(); }
+  toast(e.target.checked ? "抽卡动画已打开，下一卷生效" : "抽卡动画已关闭");
+};
+async function saveAdvanced() {
+  const body = {
+    proxy: $("proxy").value.trim(),
+    jm: { web_domain: $("jmDomain").value.trim() || "18comic.vip" },
+    pica: { web_url_template: $("picaTpl").value.trim() || S.settings.pica.web_url_template },
+  };
+  try { S.settings = await api("/api/settings", { method: "POST", body: JSON.stringify(body) }); $("saveMsg").textContent = "已保存"; loadStatus(); }
+  catch (e) { $("saveMsg").textContent = e.message; }
+}
+
+async function login(site, uid, pid, bid) {
+  const u = $(uid).value.trim(), p = $(pid).value;
+  if (!u || !p) return toast("请填写账号和密码");
+  const btn = $(bid || site + "Go"), err = $((bid ? site + "D" : site) + "Err");
+  const label = btn ? btn.textContent : "";
+  if (err) err.textContent = "";
+  if (btn) { btn.disabled = true; btn.textContent = "登录中…"; }
+  try {
+    await api("/api/login/" + site, { method: "POST", body: JSON.stringify({ username: u, password: p }) });
+    toast(`${SITE[site]}登录成功`); await loadStatus(); if (!S.batch) render();
+  } catch (e) {
+    if (err) err.textContent = e.message; else toast(e.message);
+  } finally { if (btn && btn.isConnected) { btn.disabled = false; btn.textContent = label; } }
+}
+async function logout(site) { await api("/api/logout/" + site, { method: "POST" }); await loadStatus(); if (!S.batch) render(); }
+async function doImport(site) { closeDlg(setDlg); try { await runJob("/api/import/" + site); window.scrollTo({ top: 0, behavior: "smooth" }); } catch (e) { toast(e.message); } }
+async function generate() {
+  closeDlg(genDlg);
+  const g = $("genBtn"); g.classList.remove("go"); void g.offsetWidth; g.classList.add("go");
+  if (animOn()) { $("deck").hidden = false; g.classList.add("busy"); }
+  window.scrollTo({ top: 0, behavior: "smooth" });
+  try { await runJob("/api/batches", { mode: S.mode || "balance" }); } catch (e) { toast(e.message); $("deck").hidden = true; g.classList.remove("busy"); }
+}
+/* ---------- 拉黑标签 ---------- */
+function blockedHas(t) { return ((S.settings && S.settings.blocked_tags) || []).includes(t); }
+function closePop() { $("tagPop").hidden = true; }
+function tagPop(btn) {
+  const t = btn.dataset.tag, pop = $("tagPop"), on = blockedHas(t);
+  pop.innerHTML = on
+    ? `<div>「${esc(t)}」已经拉黑了。</div><div class="row"><button class="btn sm ghost" onclick="closePop()">算了</button><button class="btn sm" data-unblock="1">取消拉黑</button></div>`
+    : `<div>以后不推带「${esc(t)}」的作品？</div><div class="row"><button class="btn sm ghost" onclick="closePop()">算了</button><button class="btn sm y" data-block="1">拉黑</button></div>`;
+  pop.hidden = false;
+  const r = btn.getBoundingClientRect(), w = pop.offsetWidth, h = pop.offsetHeight;
+  pop.style.left = Math.max(10, Math.min(innerWidth - w - 10, r.left + r.width / 2 - w / 2)) + "px";
+  pop.style.top = (r.top - h - 8 > 60 ? r.top - h - 8 : r.bottom + 8) + "px";
+  pop.querySelector("[data-block],[data-unblock]").onclick = () => setBlocked(t, !on);
+}
+async function setBlocked(t, on) {
+  closePop();
+  try {
+    const r = await api("/api/tags/block", { method: "POST", body: JSON.stringify({ tag: t, blocked: on }) });
+    S.settings = { ...(S.settings || {}), blocked_tags: r.blocked_tags };
+    toast(on ? `已拉黑「${t}」，以后不推这类` : `已取消拉黑「${t}」`);
+    renderBlocked();
+    if (S.batch) { const y = window.scrollY; S.batch = await api("/api/batches/" + S.batch.id); render(); window.scrollTo(0, y); }
+  } catch (e) { toast(e.message); }
+}
+function renderBlocked() {
+  const L = (S.settings && S.settings.blocked_tags) || [];
+  $("blockedList").innerHTML = L.map(t => `<span>${esc(t)}<button data-tag="${esc(t)}" onclick="setBlocked(this.dataset.tag, false)">×</button></span>`).join("");
+  $("blockedHint").textContent = L.length ? "点 × 取消拉黑。" : "点卡片上的标签就能拉黑，带这个标签的作品以后不再推荐。";
+}
+document.addEventListener("click", (e) => {
+  const tg = e.target.closest(".card .tag");
+  if (tg) { e.preventDefault(); return tagPop(tg); }
+  if (!e.target.closest("#tagPop")) closePop();
+});
+addEventListener("scroll", closePop, { passive: true });
+
+/* ---------- 开卷口味 ---------- */
+const MODES = [
+  ["balance", "平衡", "照你的口味来，熟的新的都有一点"],
+  ["safe", "稳妥", "多来熟作者和你最常看的口味"],
+  ["fresh", "尝鲜", "少推熟作者，多给没见过的"],
+  ["niche", "冷门", "不看热度，专挑没什么人看的"],
+];
+function renderMode() {
+  $("modeList").innerHTML = MODES.map(([k, n, d]) =>
+    `<button class="${k === (S.mode || "balance") ? "on" : ""}" onclick="setMode('${k}')"><b>${n}</b><span>${d}</span></button>`).join("");
+}
+function setMode(k) {
+  if (k === S.mode) return;
+  S.mode = k; renderMode();
+  api("/api/settings", { method: "POST", body: JSON.stringify({ rec_mode: k }) }).catch(() => {});
+}
+function openGen() {
+  const s = S.status;
+  if (s && !(s.sites.pica.favorites + s.sites.jm.favorites)) { toast("先登录并导入收藏，再来开卷"); return; }
+  renderMode(); $("genThin").innerHTML = thinNote(); openDlg(genDlg);
+}
+$("genGo").onclick = generate;
+$("genBtn").onclick = openGen;
+
+function tipNote() {
+  try { if (localStorage.getItem("honmei:tip-feedback")) return ""; } catch (e) {}
+  return `<div class="note tip" id="tipNote"><span>喜欢就点 <b>♥ 心动</b>，不想看点 <b>略过</b>，看过的点 <b>读过</b>。点得越多，下一卷越懂你。</span><button class="btn sm" onclick="hideTip()">知道了</button></div>`;
+}
+function hideTip() {
+  try { localStorage.setItem("honmei:tip-feedback", "1"); } catch (e) {}
+  const t = $("tipNote"); if (t) t.remove();
+}
+function thinNote() {
+  const s = S.status; if (!s) return "";
+  const n = s.sites.pica.favorites + s.sites.jm.favorites;
+  return n > 0 && n < 20 ? `<div class="note thin">两站收藏一共只有 ${n} 本，推荐可能不太准。多收藏一些，或者先点下面的“调音”给几本打分，会准很多。</div>` : "";
+}
+
+let resetArm = null;
+async function resetBatches() {
+  const b = $("resetBtn");
+  if (!resetArm) {
+    b.textContent = "再点一次确认"; b.classList.add("y");
+    resetArm = setTimeout(() => { resetArm = null; b.textContent = "重置开卷记录"; b.classList.remove("y"); }, 4000);
+    return;
+  }
+  clearTimeout(resetArm); resetArm = null;
+  try {
+    await api("/api/batches/reset", { method: "POST", body: "{}" });
+    b.textContent = "重置开卷记录"; b.classList.remove("y");
+    $("resetMsg").textContent = "已清空。下一卷从 Vol.1 开始，你的心动、略过和调音都还在。";
+    S.batch = null; history.replaceState(null, "", location.pathname);
+    await loadStatus(); render();
+  } catch (e) { toast(e.message); }
+}
+
+// 哔咔链接：网页版常常打不开，点的时候顺手复制标题，方便去 App 里搜
+document.addEventListener("click", (e) => {
+  const a = e.target.closest("a[data-copy]");
+  if (!a) return;
+  copyText(a.dataset.copy).then(() => toast("标题已复制，网页打不开就去哔咔 App 里搜"), () => {});
+}, true);
+
+(async () => {
+  try { S.settings = await api("/api/settings"); } catch (e) {}
+  await loadStatus();
+  const m = location.hash.match(/batch=(\d+)/);
+  await loadBatch(m ? m[1] : null);
+})();
+
+/* ---------- 调音 ---------- */
+const LV = [[4, "本命"], [3, "喜欢"], [2, "一般"], [1, "其实不太喜欢"]];
+let CAL = null;
+async function openCal() {
+  openDlg(calDlg);
+  $("calBody").innerHTML = `<div class="wait"></div>`;
+  try { const r = await api("/api/calibrate/next"); CAL = { ...r, i: 0, answers: [] }; }
+  catch (e) { $("calBody").innerHTML = `<p>${esc(e.message)}</p>`; return; }
+  if (!CAL.items.length) { $("calBody").innerHTML = `<p style="color:var(--muted)">${esc(CAL.message || "暂时没有可以调的作品了。")}</p>`; return; }
+  calCard();
+}
+function closeCal() { closeDlg(calDlg); CAL = null; loadStatus(); }
+function calCur() { return CAL.answers[CAL.i] || (CAL.answers[CAL.i] = { level: null, reasons: new Set() }); }
+function calCard() {
+  const it = CAL.items[CAL.i], n = CAL.items.length, a = calCur();
+  const art = a.reasons.has("艺术");
+  const pills = (names, cls = "") => names.map(x => `<button class="pill ${cls} ${a.reasons.has(x) ? "on" : ""}" onclick="calWhy('${x}')">${x}</button>`).join("");
+  const link = it.url ? `href="${esc(it.url)}" target="_blank" rel="noopener noreferrer"${it.site === "pica" ? ` data-copy="${esc(it.title)}"` : ""}` : "";
+  $("calBody").innerHTML = `
+    <div class="steps">${CAL.items.map((_, k) => `<span class="${k < CAL.i || (k === CAL.i && a.level !== null) ? "on" : ""}"></span>`).join("")}</div>
+    <div class="cv"><a ${link}><img src="${it.cover}" alt="" onerror="this.style.visibility='hidden'"></a>
+      <div><div class="ti"><a ${link}>${esc(it.title)}</a></div>
+        <div class="meta">${esc(it.source_name)} · ${esc(it.site_name)}${it.authors.length ? " · " + esc(it.authors.join("、")) : ""}${it.cluster ? ` · 「${esc(it.cluster)}」` : ""}</div>
+        <div class="tg">${it.tags.slice(0, 6).map(t => `<span>${esc(t)}</span>`).join("")}</div>
+        ${it.url ? `<a class="open" ${link}>去${esc(it.site_name)}翻一眼 ↗</a>` : ""}</div></div>
+    <div class="rs"><span class="lbl">喜欢它是因为（可不选）</span>${pills(["实用", "艺术"])}${art ? pills(["画风", "题材", "剧情"], "sub") : ""}</div>
+    <div class="lv4">${LV.map(([v, name]) => `<button class="l${v} ${a.level === v ? "on" : ""}" onclick="calRate(${v})">${name}</button>`).join("")}</div>
+    <div class="nav"><button onclick="calBack()" ${CAL.i ? "" : "disabled"}>← 上一本</button>
+      <span class="hint" style="margin:0">第 ${CAL.round} 轮 · ${CAL.i + 1} / ${n}</span>
+      <button onclick="calRate(0)">跳过 →</button></div>`;
+}
+function calWhy(x) {
+  const a = calCur();
+  if (a.reasons.has(x)) a.reasons.delete(x); else a.reasons.add(x);
+  if (x === "艺术" && !a.reasons.has("艺术")) ["画风", "题材", "剧情"].forEach(y => a.reasons.delete(y));
+  if (["画风", "题材", "剧情"].includes(x) && a.reasons.has(x)) a.reasons.add("艺术");
+  calCard();
+}
+function calBack() { if (CAL && CAL.i > 0) { CAL.i--; calCard(); } }
+let calBusy = false;
+async function calRate(level) {
+  if (!CAL || calBusy) return;
+  const it = CAL.items[CAL.i], a = calCur();
+  a.level = level;
+  api("/api/calibrate", { method: "POST", body: JSON.stringify({ site: it.site, wid: it.wid, level, reasons: [...a.reasons], round: CAL.round, source: it.source }) }).catch(() => {});
+  calBusy = true; calCard();
+  await new Promise(r => setTimeout(r, 220));
+  calBusy = false;
+  CAL.i++;
+  if (CAL.i < CAL.items.length) { calCard(); return; }
+  $("calBody").innerHTML = `<div class="wait">${esc(flavor("cal", FLAVOR_CAL))}</div>`;
+  await new Promise(r => setTimeout(r, 400));
+  let sm;
+  try { sm = await api("/api/calibrate/summary/" + CAL.round); } catch (e) { $("calBody").innerHTML = `<p>${esc(e.message)}</p>`; return; }
+  calSummary(sm);
+}
+function calSummary(sm) {
+  const opts = (cur) => [[4, "本命"], [3, "喜欢"], [2, "一般"], [1, "其实不太喜欢"], [0, "跳过"]].map(([v, n]) => `<option value="${v}" ${v === cur ? "selected" : ""}>${n}</option>`).join("");
+  $("calBody").innerHTML = `
+    <div class="sum">${esc(sm.text)}</div>
+    ${sm.items.map(it => `<div class="sumrow"><span>${esc(it.title)}<span class="hint" style="margin:0"> · ${esc(it.source_name)}</span></span>
+      <select onchange="calFix('${it.site}','${esc(it.wid)}',this.value,'${it.source}')">${opts(it.level)}</select></div>`).join("")}
+    <div class="row" style="margin-top:18px;gap:10px">
+      <button class="btn" style="flex:1" onclick="closeCal()">回书架</button><button class="btn y" style="flex:1" onclick="openCal()">再调一轮</button></div>`;
+}
+async function calFix(site, wid, level, source) {
+  await api("/api/calibrate", { method: "POST", body: JSON.stringify({ site, wid, level: Number(level), round: CAL.round, source }) });
+  toast("已改");
+}
+</script>
+</body>
+</html>

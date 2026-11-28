@@ -1,0 +1,50 @@
+name: Android apk
+
+on:
+  push:
+    branches: [main]
+    paths: ["android/**", ".github/workflows/android.yml"]
+    tags: ["android-v*"]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: android
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v4
+      - name: 签名钥匙
+        env:
+          KS_B64: ${{ secrets.HONMEI_KEYSTORE_B64 }}
+        run: |
+          if [ -n "$KS_B64" ]; then echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/honmei.jks"; echo "HONMEI_KEYSTORE=$RUNNER_TEMP/honmei.jks" >> "$GITHUB_ENV"; fi
+      - name: 测试 core
+        run: ./gradlew :core:test --console=plain
+      - name: 打包 apk
+        env:
+          HONMEI_KEYSTORE_PASSWORD: ${{ secrets.HONMEI_KEYSTORE_PASSWORD }}
+          HONMEI_VERSION_CODE: ${{ github.run_number }}
+          HONMEI_VERSION_NAME: ${{ startsWith(github.ref, 'refs/tags/android-v') && github.ref_name || format('0.1.{0}', github.run_number) }}
+        run: |
+          ./gradlew :app:assembleRelease --console=plain
+          mkdir -p out && cp app/build/outputs/apk/release/app-release.apk "out/honmei-${HONMEI_VERSION_NAME#android-v}.apk"
+          ls -la out
+      - uses: actions/upload-artifact@v4
+        with:
+          name: honmei-apk
+          path: android/out/*.apk
+      - name: 发布到 Release
+        if: startsWith(github.ref, 'refs/tags/android-v')
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" out/*.apk --title "本命 安卓版 ${GITHUB_REF_NAME#android-v}" --notes "手机上直接安装这个 apk。第一次安装要允许“安装未知来源应用”。"
