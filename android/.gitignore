@@ -6,3 +6,4 @@ local.properties
 *.keystore
 .idea/
 *.iml
+!core/src/main/resources/honmei/data/
