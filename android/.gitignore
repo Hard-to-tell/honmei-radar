@@ -7,3 +7,5 @@ local.properties
 .idea/
 *.iml
 !core/src/main/resources/honmei/data/
+*.salive
+.kotlin/

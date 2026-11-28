@@ -433,6 +433,18 @@ body.taste #tasteView { display: block; } body.taste #shelfView { display: none;
 dialog .pop { position: absolute; }
 .it-top .im { display: block; }
 .res button .muted { font-size: 11.5px; }
+.sxs { display: grid; gap: 14px; margin-top: 8px; }
+.sx .sh { display: flex; justify-content: space-between; align-items: baseline; font-weight: 700; font-size: 14px; }
+.sx .sh small { font-weight: 400; color: var(--faint); font-size: 11px; margin-left: 8px; letter-spacing: .04em; }
+.sx .sv { color: var(--y); font-variant-numeric: tabular-nums; }
+.sx .st { position: relative; height: 10px; border-radius: 99px; background: #1f1f1f; margin: 6px 0 4px; }
+.sx .st i { display: block; height: 100%; border-radius: 99px; background: linear-gradient(90deg, #a8770a, var(--y)); width: 0; transition: width 1.1s cubic-bezier(.2,.75,.25,1); transition-delay: calc(var(--i, 0) * 70ms + .15s); }
+.sx .st em { position: absolute; top: -3px; bottom: -3px; width: 2px; background: #e8e2d4; border-radius: 2px; transform: translateX(-1px); }
+.sx .sr { font-size: 11.5px; color: var(--muted); } .sx .sr .hi { color: var(--y); font-weight: 600; } .sx .sr .lo { color: #8a93a6; font-weight: 500; } .sx .sr b { font-weight: 500; }
+.legend .m { background: #e8e2d4; width: 3px !important; height: 12px !important; }
+.mines { display: flex; flex-wrap: wrap; gap: 8px; }
+.mines span { border: 1px solid rgba(255,90,95,.5); color: #ffb3b5; background: rgba(255,90,95,.08); border-radius: 999px; padding: 4px 14px; font-size: 14px; }
+.nolim { font-size: 40px !important; letter-spacing: .12em; background: linear-gradient(100deg, #ffd21f 20%, #fff4b8 40%, #ffd21f 60%); background-size: 220% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; animation: sheen 4.5s ease-in-out infinite; }
 /* ---------- 设置 ---------- */
 .sec { background: var(--panel); border: 1px solid var(--line); border-radius: 14px; padding: 13px 14px; margin-bottom: 12px; }
 .sec h4 { margin: 0 0 10px; font-size: 14.5px; display: flex; align-items: center; gap: 8px; }
@@ -1184,12 +1196,45 @@ function revealSetup() {
   revealObs = new IntersectionObserver((es) => es.forEach(e => { if (e.isIntersecting) { showIn(e.target); revealObs.unobserve(e.target); } }), { rootMargin: "0px 0px -8% 0px", threshold: 0.12 });
   targets.forEach(t => revealObs.observe(t));
 }
+const SEXO_TYPE = {
+  "情感联结": ["浪漫依恋型", "比起刺激本身，你更在意两个人之间发生了什么：心意、关系、那一点点甜。"],
+  "感官刺激": ["感官直球型", "你看重画面和身体反应本身，直接、浓烈、不绕弯。"],
+  "SM / 权力交换": ["权力游戏型", "谁主导、谁失控，绳子、项圈还是一句命令，这层张力本身就是你的兴奋点。"],
+  "恋物": ["细节鉴赏型", "一双袜子、一套制服就能撑起一整本，你的注意力落在细节上。"],
+  "禁忌越界": ["越界探索型", "规则被打破的那一刻最迷人，越不该发生越想看。"],
+  "窥视与暴露": ["目光游戏型", "被看见、或者偷看，“有人在看”这件事本身就是燃料。"],
+  "多人": ["热闹派", "人越多越好，你要的是场面。"],
+  "非人幻想": ["幻想越界型", "现实不够劲，触手、魅魔和异世界才对味。"],
+};
+function sexoBlock(L) {
+  if (!L.length) return "";
+  const hasBase = L.some(x => x.ratio);
+  const rank = [...L].filter(x => x.share >= 0.08).sort((a, b) => hasBase ? (b.ratio || 0) - (a.ratio || 0) : b.share - a.share);
+  const main = rank[0], second = rank[1];
+  const mx = Math.max(...L.map(x => Math.max(x.share, x.base || 0)), 0.1);
+  const rows = L.map((x, i) => {
+    const r = x.ratio, tag = !r ? "" : r >= 1.25 ? `<b class="hi">高于平均 ×${r.toFixed(1)}</b>` : r <= 0.8 ? `<b class="lo">低于平均 ×${r.toFixed(1)}</b>` : `<b>和平均差不多</b>`;
+    return `<div class="sx rv" style="--i:${i}"><div class="sh"><span>${esc(x.name)}<small>${esc(x.term)}</small></span><span class="sv">${pct(x.share)}</span></div>
+      <div class="st"><i data-w="${(100 * x.share / mx).toFixed(1)}"></i>${x.base ? `<em style="left:${(100 * x.base / mx).toFixed(1)}%"></em>` : ""}</div><div class="sr">${tag}</div></div>`;
+  }).join("");
+  const ty = main && SEXO_TYPE[main.name];
+  return `<div class="kicker">性学侧写</div>${ty ? `<h2>你是<em>${ty[0]}</em></h2><p class="lead">${ty[1]}${second && SEXO_TYPE[second.name] ? ` 其次带一点<b>${SEXO_TYPE[second.name][0]}</b>。` : ""}</p>` : `<h2>你的<em>性学侧写</em></h2>`}
+    ${hasBase ? `<div class="legend"><span><i class="r"></i>你的收藏</span><span><i class="m"></i>站内平均</span></div>` : ""}
+    <div class="sxs">${rows}</div>
+    <p class="muted" style="margin-top:12px">参考性学里常见的分法（情感 / 感官 / SM 与权力交换 / 恋物 / 禁忌 / 窥视与暴露 / 多人 / 幻想），按标签粗估：数字是命中这一类标签的收藏占比，竖线是禁漫站内随机作品的占比。娱乐向，不是诊断。</p>`;
+}
+function mineBlock() {
+  const L = (S.settings && S.settings.blocked_tags) || [];
+  return `<div class="kicker">雷区</div>${L.length ? `<h2>这些，<br>你<em>说什么都不看</em></h2><div class="mines">${L.map((t, i) => `<span class="rv" style="--i:${i}">${esc(t)}</span>`).join("")}</div>
+    <p class="muted" style="margin-top:12px">${L.length} 个拉黑的标签，带它们的作品不会再被推荐。在“设置 → 推荐”里可以取消。</p>`
+    : `<h2 class="nolim">百无禁忌</h2><p class="lead">你还没拉黑过任何标签。真遇到不想看的，在书架上点开作品详情，点那个标签就能拉黑。</p>`}`;
+}
 function renderTaste() {
   const D = TV, v = $("tasteView");
   if (!D || D.empty) { v.innerHTML = `<section><div class="kicker">口味谱</div><h2>还没有收藏</h2><p class="lead">先登录并导入哔咔或禁漫的收藏，这里会画出你的口味。</p><button class="btn y" onclick="openSet()">去导入</button></section>`; return; }
   const ps = D.per_site || {}, topTags = D.top_tags.slice(0, 24), t0 = topTags[0], topAuthor = D.authors[0];
   const maxShare = t0?.share || 1;
-  const cloud = topTags.map((t, i) => `<span class="kw${i < 3 ? " top" : ""}" style="--i:${i}" data-kw="${esc(t.tag)}" data-st="font-size:${(14 + 30 * Math.sqrt(t.share / maxShare)).toFixed(0)}px;color:${i < 3 ? "var(--y)" : i < 8 ? "#f4f1e8" : "#8f8a80"}">${esc(t.tag)}</span>`).join("").replace(/" data-st="/g, ";");
+  const cloud = topTags.map((t, i) => `<span class="kw${i < 3 ? " top" : ""}" data-kw="${esc(t.tag)}" style="--i:${i};font-size:${(13 + 33 * Math.pow(t.share / maxShare, 1.1)).toFixed(0)}px;color:${i < 3 ? "var(--y)" : i < 8 ? "#f4f1e8" : "#8f8a80"}">${esc(t.tag)}</span>`).join("");
   const hid = D.hidden_tags || [];
   const dmax = D.dimensions.reduce((m, x) => Math.max(m, x.top[0]?.share || 0), 0);
   const sec = [
@@ -1214,6 +1259,8 @@ function renderTaste() {
     D.dimensions.length ? `<div class="kicker">拆开来看</div><h2>每个方向，<br>你最常停在哪</h2><div class="dims rv">${D.dimensions.map(dm => `<div class="dim"><h3>${esc(dm.name)}</h3>${bars(dm.top.slice(0, 5), "share", "tag", pct)}</div>`).join("")}</div><div class="swipe">← 左右滑动，共 ${D.dimensions.length} 个方向 →</div>` : "",
     `<div class="kicker">倾向</div><h2>你在光谱的<em>哪一端</em></h2>${radar(D.axes)}${pairs(D.axes)}
      <p class="muted" style="margin-top:14px">每一项是命中相关标签的收藏比例；同一本可以同时命中好几项。</p>`,
+    sexoBlock(D.sexology || []),
+    mineBlock(),
     topAuthor ? `<div class="kicker">本命作者</div><h2><em>${esc(topAuthor.name)}</em><br>是你翻得最多的名字</h2>${authorsBlock(D.authors)}` : "",
     `<div class="kicker">你亲手点的本命</div><h2>${D.honmei?.length ? "这几本，<br>你说是<em>本命</em>" : "哪几本，<br>是你的<em>本命</em>？"}</h2>
      <div class="covers">${(D.honmei || []).map(b => cov(b, "", `<button class="rm" data-rm="${esc(b.site)}|${esc(b.wid)}" aria-label="不算本命了">×</button>`)).join("")}<button class="addcov" id="addBtn">＋ 添加本命</button></div>

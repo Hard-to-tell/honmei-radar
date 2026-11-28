@@ -31,6 +31,17 @@ object Insights {
         "腿控" to listOf("过膝袜", "长筒袜", "连裤", "丝袜", "足", "腿"),
         "重口" to listOf("阿黑颜", "阿嘿颜", "蹦坏脸", "失禁", "触手", "怪物", "重口", "猎奇", "肛"),
     )
+    /** 性学侧写：参考性学里常见的分法，用标签粗估，和站内平均比。 */
+    val SEXO: List<Triple<String, String, List<String>>> = listOf(
+        Triple("情感联结", "Romantic", listOf("纯爱", "恋爱", "初恋", "接吻", "亲吻", "甜", "青梅", "女友", "夫妻", "告白", "后宫闪光", "爱情")),
+        Triple("感官刺激", "Sensory", listOf("潮吹", "横切面", "阿嘿颜", "阿黑颜", "中出", "内射", "颜射", "口爆", "精液", "失禁", "淫纹", "高潮")),
+        Triple("SM / 权力交换", "BDSM · D/s", listOf("sm", "调教", "束缚", "拘束", "捆绑", "绳", "项圈", "鞭", "滴蜡", "窒息", "虐", "女性支配", "女性主导", "榨精", "催眠", "洗脑", "凌辱", "堕落", "恶堕", "痴女", "逆推", "奴隶", "常识改变")),
+        Triple("恋物", "Fetish", listOf("丝袜", "长筒袜", "连裤", "足", "腋", "眼镜", "制服", "校服", "女仆", "泳装", "兔女郎", "体操服", "内衣", "旗袍", "乳头")),
+        Triple("禁忌越界", "Taboo", listOf("ntr", "出轨", "乱伦", "近亲", "寝取", "人妻", "援交", "师生", "交换", "外遇")),
+        Triple("窥视与暴露", "Voyeur / Exhib", listOf("露出", "偷窥", "野外", "公众", "电车", "痴汉", "偷拍", "直播", "羞耻")),
+        Triple("多人", "Group", listOf("3p", "多p", "4p", "轮奸", "乱交", "群交", "后宫")),
+        Triple("非人幻想", "Fantasy", listOf("触手", "怪物", "魅魔", "人外", "兽耳", "异种", "精灵", "机械", "史莱姆", "异世界")),
+    )
     val NOISY_AUTHORS = setOf("3d", "急求", "多作者", "よろず", "anthology", "アンソロジー", "未知", "unknown", "ai", "pixiv")
     const val HIDDEN_KEY = "report:hidden_tags"
     private val EVENT = Regex("^(c\\d{2,3}|comic.*|\\d+.*)$")
@@ -99,6 +110,12 @@ object Insights {
         }
         val sets = tagSets.map { it.toSet() }
         val axes = AXES.mapValues { (_, keys) -> pct3(sets.count { s -> s.any { match(it, keys) } }.toDouble() / n) }
+        val bgSets = TasteData.backgroundWorks(db).map { w -> Norm.normTags(w.tags).toSet() }
+        val sexo = SEXO.map { (name, term, keys) ->
+            val share = sets.count { s -> s.any { match(it, keys) } }.toDouble() / n
+            val base = if (bgSets.size >= 30) (bgSets.count { s -> s.any { match(it, keys) } } + 0.5) / (bgSets.size + 1) else 0.0
+            linkedMapOf("name" to name, "term" to term, "share" to r3(share), "base" to r3(base), "ratio" to if (base > 0) r2(share / base) else null)
+        }
         // 新旧变化
         val bySite = LinkedHashMap<String, MutableList<Pair<List<String>, Int>>>()
         for ((f, ts) in favs.zip(tagSets)) bySite.getOrPut(f.w.site) { ArrayList() }.add(ts to f.rank)
@@ -168,7 +185,7 @@ object Insights {
             "avg_tags" to r1(tagSets.sumOf { it.size }.toDouble() / n),
             "color_share" to r3(color.toDouble() / n), "long_share" to r3(long.toDouble() / n),
             "both_sites" to keys.values.count { it.size > 1 },
-            "top_tags" to topTags, "dimensions" to dimensions, "axes" to axes, "authors" to loyal,
+            "top_tags" to topTags, "dimensions" to dimensions, "axes" to axes, "sexology" to sexo, "authors" to loyal,
             "parodies" to top(parodyCount, 8).filter { it.value >= 2 }.map { mapOf("name" to parodyName.getValue(it.key), "count" to it.value) },
             "groups" to top(groupCount, 5).filter { it.value >= 3 }.map { mapOf("name" to it.key, "count" to it.value) },
             "rising" to rising, "falling" to falling, "clusters" to clusters, "outliers" to outliers,
