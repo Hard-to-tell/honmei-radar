@@ -27,12 +27,13 @@ jobs:
         env:
           KS_B64: ${{ secrets.HONMEI_KEYSTORE_B64 }}
         run: |
-          if [ -n "$KS_B64" ]; then echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/honmei.jks"; echo "HONMEI_KEYSTORE=$RUNNER_TEMP/honmei.jks" >> "$GITHUB_ENV"; fi
+          if [ -n "$KS_B64" ]; then echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/honmei.jks"; echo "HONMEI_KEYSTORE=$RUNNER_TEMP/honmei.jks" >> "$GITHUB_ENV";
+          elif [[ "$GITHUB_REF" == refs/tags/* ]]; then echo "::error::发布版需要签名钥匙（secret HONMEI_KEYSTORE_B64）"; exit 1;
+          else echo "::warning::没有签名钥匙，这次用临时钥匙签名（只能试装，不能覆盖升级）"; fi
       - name: 测试 core
         run: ./gradlew :core:test --console=plain
       - name: 打包 apk
         env:
-          HONMEI_KEYSTORE_PASSWORD: ${{ secrets.HONMEI_KEYSTORE_PASSWORD }}
           HONMEI_VERSION_CODE: ${{ github.run_number }}
           HONMEI_VERSION_NAME: ${{ startsWith(github.ref, 'refs/tags/android-v') && github.ref_name || format('0.1.{0}', github.run_number) }}
         run: |

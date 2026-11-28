@@ -18,9 +18,9 @@ android {
             val ks = System.getenv("HONMEI_KEYSTORE")
             if (ks != null && file(ks).exists()) {
                 storeFile = file(ks)
-                storePassword = System.getenv("HONMEI_KEYSTORE_PASSWORD")
+                storePassword = System.getenv("HONMEI_KEYSTORE_PASSWORD") ?: "honmei-shelf"
                 keyAlias = System.getenv("HONMEI_KEY_ALIAS") ?: "honmei"
-                keyPassword = System.getenv("HONMEI_KEY_PASSWORD") ?: System.getenv("HONMEI_KEYSTORE_PASSWORD")
+                keyPassword = System.getenv("HONMEI_KEY_PASSWORD") ?: System.getenv("HONMEI_KEYSTORE_PASSWORD") ?: "honmei-shelf"
             }
         }
     }
