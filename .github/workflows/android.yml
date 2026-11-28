@@ -4,7 +4,6 @@ on:
   push:
     branches: [main]
     paths: ["android/**", ".github/workflows/android.yml"]
-    tags: ["android-v*"]
   workflow_dispatch:
 
 permissions:
@@ -28,24 +27,27 @@ jobs:
           KS_B64: ${{ secrets.HONMEI_KEYSTORE_B64 }}
         run: |
           if [ -n "$KS_B64" ]; then echo "$KS_B64" | base64 -d > "$RUNNER_TEMP/honmei.jks"; echo "HONMEI_KEYSTORE=$RUNNER_TEMP/honmei.jks" >> "$GITHUB_ENV";
-          elif [[ "$GITHUB_REF" == refs/tags/* ]]; then echo "::error::发布版需要签名钥匙（secret HONMEI_KEYSTORE_B64）"; exit 1;
           else echo "::warning::没有签名钥匙，这次用临时钥匙签名（只能试装，不能覆盖升级）"; fi
       - name: 测试 core
         run: ./gradlew :core:test --console=plain
       - name: 打包 apk
         env:
           HONMEI_VERSION_CODE: ${{ github.run_number }}
-          HONMEI_VERSION_NAME: ${{ startsWith(github.ref, 'refs/tags/android-v') && github.ref_name || format('0.1.{0}', github.run_number) }}
         run: |
+          export HONMEI_VERSION_NAME=$(cat VERSION)
           ./gradlew :app:assembleRelease --console=plain
-          mkdir -p out && cp app/build/outputs/apk/release/app-release.apk "out/honmei-${HONMEI_VERSION_NAME#android-v}.apk"
+          mkdir -p out && cp app/build/outputs/apk/release/app-release.apk "out/honmei-${HONMEI_VERSION_NAME}.apk"
           ls -la out
       - uses: actions/upload-artifact@v4
         with:
           name: honmei-apk
           path: android/out/*.apk
-      - name: 发布到 Release
-        if: startsWith(github.ref, 'refs/tags/android-v')
+      - name: 发布到 Release（android/VERSION 改了新版本号才发）
+        if: github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release create "$GITHUB_REF_NAME" out/*.apk --title "本命 安卓版 ${GITHUB_REF_NAME#android-v}" --notes "手机上直接安装这个 apk。第一次安装要允许“安装未知来源应用”。"
+        run: |
+          V=$(cat VERSION); TAG="android-v$V"
+          if gh release view "$TAG" >/dev/null 2>&1; then echo "$TAG 已发布过，跳过"; exit 0; fi
+          if [ -z "$HONMEI_KEYSTORE" ]; then echo "::error::发布版需要签名钥匙"; exit 1; fi
+          gh release create "$TAG" out/*.apk --target "$GITHUB_SHA" --title "本命 安卓版 $V" --notes-file RELEASE_NOTES.md
