@@ -14,7 +14,7 @@ class AndroidSql(path: String) : Sql {
     override fun query(sql: String, args: List<Any?>): List<Row> {
         val strArgs: Array<String> = args.map { a -> when (a) { null -> ""; is Boolean -> if (a) "1" else "0"; else -> a.toString() } }.toTypedArray()
         // rawQuery 只收字符串参数；数字比较用的列在 SQLite 里会按亲和性自动转换
-        return db.rawQueryWithFactory(null, sql, strArgs, null).use { c ->
+        return db.rawQuery(sql, strArgs).use { c ->
             val out = ArrayList<Row>(c.count)
             val names = c.columnNames
             while (c.moveToNext()) {
